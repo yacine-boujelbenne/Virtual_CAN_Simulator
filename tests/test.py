@@ -7,10 +7,10 @@ def compile_cpp():
     """Compile the C++ program"""
     # List all C++ files that need to be compiled
     cpp_files = [
-        "./SimulationManager.cpp",
-        "./src/CanTp.cpp",
-        "./src/Receiver.cpp",
-        "./src/Sender.cpp"
+        "../SimulationManager.cpp",
+        "../src/CanTp.cpp",
+        "../src/Receiver.cpp",
+        "../src/Sender.cpp"
     ]
     
     # Check if all files exist

@@ -17,6 +17,7 @@
 #include "./headers/Sender.hpp"
 #include "./headers/Receiver.hpp"
 
+//this is the basic and old main Menu used to test the code functionality in a manual way.
 
 void demonstrateBasicCanCommunication()
 {

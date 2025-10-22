@@ -10,7 +10,7 @@ Receiver::Receiver(std::string name, bool available)
 {
     availability = available; // Initialize availability
     ECUName = name;
-    // Initialize CanManager reference
+    //Declaration of the ECU when it4s istablished.
     std::cout << "      -> Receiver intiallized with name: " << getEcuName() << std::endl;
 }
 
@@ -21,11 +21,12 @@ Receiver::~Receiver()
 
 void Receiver::receiveEcuData(CanTp &tp)
 {
+    //Declaration of the availibility of the ECU.
 
         std::cout << "      -> ECU is available!"<<std::endl<<"      -> Start receiving...." << std::endl;
         
         this->setmessage(tp.receiveMessage());
-        std::cout<<this->getmessage()<<std::endl;
+
     
     
     if (this->isAvailable()==false)
