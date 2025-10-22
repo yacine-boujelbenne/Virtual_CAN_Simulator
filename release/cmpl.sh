@@ -11,9 +11,9 @@ SRC_FILES=$(find ../src -name "*.cpp")
 # Output binary name
 OUTPUT="myapp"
 
-echo "🔍 Checking for cppcheck..."
+echo " Checking for cppcheck..."
 if command -v cppcheck >/dev/null 2>&1; then
-    echo "✅ Running cppcheck..."
+    echo " Running cppcheck..."
     cppcheck --enable=all --inconclusive --quiet $SRC_FILES $MAIN_FILE
         cppcheck --enable=all --inconclusive --quiet \
              --suppress=*:${PWD}/headers/json.hpp \
@@ -22,7 +22,7 @@ else
     echo "  cppcheck not found. Skipping static analysis."
 fi
 
-echo "⚙️  Compiling project..."
+echo "  Compiling project..."
 $CXX $CXXFLAGS $SRC_FILES $MAIN_FILE -o $OUTPUT
 
 if [ $? -eq 0 ]; then
