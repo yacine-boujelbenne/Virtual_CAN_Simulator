@@ -6,8 +6,7 @@ CXX=g++
 CXXFLAGS="-Wall -Wextra -std=c++17 -O2"
 
 # Source files (all .cpp in src plus SimulationManager.cpp)
-SRC_FILES=$(find src -name "*.cpp")
-MAIN_FILE="SimulationManager.cpp"
+SRC_FILES=$(find ../src -name "*.cpp")
 
 # Output binary name
 OUTPUT="myapp"
