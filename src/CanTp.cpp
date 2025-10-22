@@ -9,6 +9,8 @@
 #include "../headers/CanBus.hpp"
 #include "../headers/Logger.hpp"
 
+
+
 static const size_t MAX_SF_DATA = 7;
 static const size_t MAX_CF_DATA = 6;
 static bool situation = true;
