@@ -1,0 +1,154 @@
+Start testing: Aug 06 21:08 EDT
+----------------------------------------------------------
+1/2 Testing: GuiTests
+1/2 Test: GuiTests
+Command: "/home/kali/Desktop/Virtual_Can_Simulator/build/gui_tests"
+Directory: /home/kali/Desktop/Virtual_Can_Simulator/build
+"GuiTests" start time: Aug 06 21:08 EDT
+Output:
+----------------------------------------------------------
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mMulti-frame transmission complete![0m
+This plugin does not support propagateSizeHints()
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mMulti-frame transmission complete![0m
+gui_tests: ALL PASSED
+<end of output>
+Test time =   1.05 sec
+----------------------------------------------------------
+Test Passed.
+"GuiTests" end time: Aug 06 21:08 EDT
+"GuiTests" time elapsed: 00:00:01
+----------------------------------------------------------
+
+2/2 Testing: EngineTests
+2/2 Test: EngineTests
+Command: "/home/kali/Desktop/Virtual_Can_Simulator/build/run_tests"
+Directory: /home/kali/Desktop/Virtual_Can_Simulator/build
+"EngineTests" start time: Aug 06 21:08 EDT
+Output:
+----------------------------------------------------------
+Running main() from /home/kali/Desktop/Virtual_Can_Simulator/googletest/googletest/src/gtest_main.cc
+[==========] Running 22 tests from 7 test suites.
+[----------] Global test environment set-up.
+[----------] 2 tests from CanTest
+[ RUN      ] CanTest.ConstructorAndGetters
+[       OK ] CanTest.ConstructorAndGetters (0 ms)
+[ RUN      ] CanTest.EncoderDecoder
+[       OK ] CanTest.EncoderDecoder (0 ms)
+[----------] 2 tests from CanTest (0 ms total)
+
+[----------] 2 tests from CanBusTest
+[ RUN      ] CanBusTest.VirtualInterfaceCreation
+sudo: a terminal is required to read the password; either use the -S option to read from standard input or configure an askpass helper
+sudo: a password is required
+Error loading vcan module
+/home/kali/Desktop/Virtual_Can_Simulator/tests/test_canBus.cpp:13: Skipped
+vcan interface not available (requires sudo + vcan module)
+
+[  SKIPPED ] CanBusTest.VirtualInterfaceCreation (120 ms)
+[ RUN      ] CanBusTest.SendReceiveSimulation
+sudo: a terminal is required to read the password; either use the -S option to read from standard input or configure an askpass helper
+sudo: a password is required
+Error loading vcan module
+/home/kali/Desktop/Virtual_Can_Simulator/tests/test_canBus.cpp:22: Skipped
+vcan interface not available (requires sudo + vcan module)
+
+[  SKIPPED ] CanBusTest.SendReceiveSimulation (78 ms)
+[----------] 2 tests from CanBusTest (199 ms total)
+
+[----------] 4 tests from CanTpTest
+[ RUN      ] CanTpTest.SingleFrameTransmission
+[       OK ] CanTpTest.SingleFrameTransmission (11 ms)
+[ RUN      ] CanTpTest.MultiFrameTransmission
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mMulti-frame transmission complete![0m
+[       OK ] CanTpTest.MultiFrameTransmission (130 ms)
+[ RUN      ] CanTpTest.LargeMultiFrameRoundTrip
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mMulti-frame transmission complete![0m
+[       OK ] CanTpTest.LargeMultiFrameRoundTrip (1727 ms)
+[ RUN      ] CanTpTest.PollReceiveAssemblesMultiFrame
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mMulti-frame transmission complete![0m
+[       OK ] CanTpTest.PollReceiveAssemblesMultiFrame (95 ms)
+[----------] 4 tests from CanTpTest (1964 ms total)
+
+[----------] 8 tests from EngineTest
+[ RUN      ] EngineTest.RoundTripSingleFrame
+[       OK ] EngineTest.RoundTripSingleFrame (42 ms)
+[ RUN      ] EngineTest.RoundTripMultiFrame
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mMulti-frame transmission complete![0m
+[       OK ] EngineTest.RoundTripMultiFrame (157 ms)
+[ RUN      ] EngineTest.ArbitrationPriorityOrder
+[       OK ] EngineTest.ArbitrationPriorityOrder (134 ms)
+[ RUN      ] EngineTest.UnavailableSenderIsSkipped
+[       OK ] EngineTest.UnavailableSenderIsSkipped (603 ms)
+[ RUN      ] EngineTest.ConfigRoundTrip
+[       OK ] EngineTest.ConfigRoundTrip (3 ms)
+[ RUN      ] EngineTest.SaveLoadCustomTopology
+[       OK ] EngineTest.SaveLoadCustomTopology (1 ms)
+[ RUN      ] EngineTest.BusSetOrderReordersLinks
+[       OK ] EngineTest.BusSetOrderReordersLinks (0 ms)
+[ RUN      ] EngineTest.ConfigPersistsPositionsAndSenderOrder
+[       OK ] EngineTest.ConfigPersistsPositionsAndSenderOrder (1 ms)
+[----------] 8 tests from EngineTest (945 ms total)
+
+[----------] 1 test from ReceiverTest
+[ RUN      ] ReceiverTest.BasicFunctionality
+      -> Receiver intiallized with name: TestReceiver
+  
+[       OK ] ReceiverTest.BasicFunctionality (0 ms)
+[----------] 1 test from ReceiverTest (0 ms total)
+
+[----------] 1 test from SenderTest
+[ RUN      ] SenderTest.BasicFunctionality
+  -> CAN socket not initialized
+  
+[       OK ] SenderTest.BasicFunctionality (0 ms)
+[----------] 1 test from SenderTest (0 ms total)
+
+[----------] 4 tests from SimBusTest
+[ RUN      ] SimBusTest.BroadcastReachesAllChannels
+[       OK ] SimBusTest.BroadcastReachesAllChannels (0 ms)
+[ RUN      ] SimBusTest.DetachedChannelStopsReceiving
+[       OK ] SimBusTest.DetachedChannelStopsReceiving (0 ms)
+[ RUN      ] SimBusTest.FrameSinkFiresOnBroadcast
+[       OK ] SimBusTest.FrameSinkFiresOnBroadcast (0 ms)
+[ RUN      ] SimBusTest.EmptyReceiveReturnsDefaultFrame
+[       OK ] SimBusTest.EmptyReceiveReturnsDefaultFrame (0 ms)
+[----------] 4 tests from SimBusTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 22 tests from 7 test suites ran. (3111 ms total)
+[  PASSED  ] 20 tests.
+[  SKIPPED ] 2 tests, listed below:
+[  SKIPPED ] CanBusTest.VirtualInterfaceCreation
+[  SKIPPED ] CanBusTest.SendReceiveSimulation
+<end of output>
+Test time =   3.12 sec
+----------------------------------------------------------
+Test Passed.
+"EngineTests" end time: Aug 06 21:08 EDT
+"EngineTests" time elapsed: 00:00:03
+----------------------------------------------------------
+
+End testing: Aug 06 21:08 EDT

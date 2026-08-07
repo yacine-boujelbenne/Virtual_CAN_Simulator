@@ -1,0 +1,30 @@
+Start testing: Aug 06 14:03 EDT
+----------------------------------------------------------
+1/2 Testing: GuiTests
+1/2 Test: GuiTests
+Command: "/home/kali/Desktop/Virtual_Can_Simulator/build/gui_tests"
+Directory: /home/kali/Desktop/Virtual_Can_Simulator/build
+"GuiTests" start time: Aug 06 14:03 EDT
+Output:
+----------------------------------------------------------
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mMulti-frame transmission complete![0m
+This plugin does not support propagateSizeHints()
+[1;32mWaiting for Flow Control frame with timeout...[0m
+[1;32mMulti-frame transmission complete![0m
+gui_tests: ALL PASSED
+<end of output>
+Test time =   1.37 sec
+----------------------------------------------------------
+Test Passed.
+"GuiTests" end time: Aug 06 14:04 EDT
+"GuiTests" time elapsed: 00:00:01
+----------------------------------------------------------
+

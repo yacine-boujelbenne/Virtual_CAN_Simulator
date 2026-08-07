@@ -1,0 +1,42 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/can_gui_autogen.dir/AutogenUsed.txt"
+  "CMakeFiles/can_gui_autogen.dir/ParseCache.txt"
+  "can_gui_autogen"
+  "CMakeFiles/can_gui.dir/can_gui_autogen/mocs_compilation.cpp.o"
+  "CMakeFiles/can_gui.dir/can_gui_autogen/mocs_compilation.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/EngineBridge.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/EngineBridge.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/MainWindow.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/MainWindow.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/TopologyEditor.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/TopologyEditor.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/canvas/BusLaneItem.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/canvas/BusLaneItem.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/canvas/EcuNodeItem.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/canvas/EcuNodeItem.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/canvas/LinkEdgeItem.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/canvas/LinkEdgeItem.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/canvas/TopologyScene.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/canvas/TopologyScene.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/views/DashboardView.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/views/DashboardView.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/views/EcuDetailDialog.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/views/EcuDetailDialog.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/views/HomeView.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/views/HomeView.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/views/MonitorView.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/views/MonitorView.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/views/SettingsView.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/views/SettingsView.cpp.o.d"
+  "CMakeFiles/can_gui.dir/gui/widgets/EcuBox.cpp.o"
+  "CMakeFiles/can_gui.dir/gui/widgets/EcuBox.cpp.o.d"
+  "can_gui_autogen/mocs_compilation.cpp"
+  "can_gui_autogen/timestamp"
+  "libcan_gui.a"
+  "libcan_gui.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/can_gui.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

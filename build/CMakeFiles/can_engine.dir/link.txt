@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcan_engine.a CMakeFiles/can_engine.dir/can_engine_autogen/mocs_compilation.cpp.o CMakeFiles/can_engine.dir/src/Bus.cpp.o CMakeFiles/can_engine.dir/src/Can.cpp.o CMakeFiles/can_engine.dir/src/CanBus.cpp.o CMakeFiles/can_engine.dir/src/CanTp.cpp.o CMakeFiles/can_engine.dir/src/ConfigService.cpp.o CMakeFiles/can_engine.dir/src/Receiver.cpp.o CMakeFiles/can_engine.dir/src/Sender.cpp.o CMakeFiles/can_engine.dir/src/SimBus.cpp.o CMakeFiles/can_engine.dir/src/SimulationEngine.cpp.o CMakeFiles/can_engine.dir/src/Topology.cpp.o
+/usr/bin/ranlib libcan_engine.a

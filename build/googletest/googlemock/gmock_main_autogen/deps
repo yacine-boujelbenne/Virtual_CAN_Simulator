@@ -1,0 +1,12 @@
+gmock_main_autogen/timestamp: \
+	/home/kali/Desktop/Virtual_Can_Simulator/googletest/googlemock/CMakeLists.txt \
+	/home/kali/Desktop/Virtual_Can_Simulator/googletest/googlemock/cmake/gmock.pc.in \
+	/home/kali/Desktop/Virtual_Can_Simulator/googletest/googlemock/cmake/gmock_main.pc.in \
+	/home/kali/Desktop/Virtual_Can_Simulator/googletest/googlemock/src/gmock_main.cc \
+	/usr/share/cmake-4.3/Modules/CheckCSourceCompiles.cmake \
+	/usr/share/cmake-4.3/Modules/CheckIncludeFile.cmake \
+	/usr/share/cmake-4.3/Modules/CheckLibraryExists.cmake \
+	/usr/share/cmake-4.3/Modules/FindPackageHandleStandardArgs.cmake \
+	/usr/share/cmake-4.3/Modules/FindPackageMessage.cmake \
+	/usr/share/cmake-4.3/Modules/FindThreads.cmake \
+	/usr/bin/cmake

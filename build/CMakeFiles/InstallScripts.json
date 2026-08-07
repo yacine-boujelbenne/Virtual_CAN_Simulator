@@ -1,0 +1,10 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/kali/Desktop/Virtual_Can_Simulator/build/cmake_install.cmake",
+		"/home/kali/Desktop/Virtual_Can_Simulator/build/googletest/cmake_install.cmake",
+		"/home/kali/Desktop/Virtual_Can_Simulator/build/googletest/googlemock/cmake_install.cmake",
+		"/home/kali/Desktop/Virtual_Can_Simulator/build/googletest/googletest/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

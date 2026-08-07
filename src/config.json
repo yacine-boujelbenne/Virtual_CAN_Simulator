@@ -1,0 +1,47 @@
+{
+  "BlockSize": 8,
+  "EcuName": "Engine_ECU",
+  "Rx": 1800,
+  "SeparationTime": 10,
+  "Topology": {
+    "BusList": [
+      {
+        "arbitration": "Priority",
+        "name": "main",
+        "senders": [
+          "Sender_1",
+          "Receiver_1"
+        ]
+      }
+    ],
+    "EcuList": [
+      {
+        "available": true,
+        "bus": "main",
+        "name": "Sender_1",
+        "pos": [
+          110.0,
+          260.0
+        ],
+        "priority": 0,
+        "role": "Sender",
+        "rx": 1800,
+        "tx": 1792
+      },
+      {
+        "available": true,
+        "bus": "main",
+        "name": "Receiver_1",
+        "pos": [
+          310.0,
+          260.0
+        ],
+        "priority": 0,
+        "role": "Receiver",
+        "rx": 1792,
+        "tx": 1800
+      }
+    ]
+  },
+  "Tx": 1792
+}
