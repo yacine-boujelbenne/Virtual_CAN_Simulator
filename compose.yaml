@@ -1,17 +1,97 @@
+x-ecu-environment: &ecu-environment
+  CLUSTER_TOKEN: ${CLUSTER_TOKEN:-local-development-token}
+
+x-ecu: &ecu
+  image: virtual-ecu-kernel:local
+  build:
+    context: .
+    target: ecu
+  environment: *ecu-environment
+  networks: [vehicle]
+  init: true
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  mem_limit: 128m
+  cpus: 0.5
+  pids_limit: 64
+  restart: unless-stopped
+
 services:
+  ecu-motor:
+    <<: *ecu
+    environment:
+      <<: *ecu-environment
+      ECU_SERVICE: ecu-motor
+  ecu-abs:
+    <<: *ecu
+    environment:
+      <<: *ecu-environment
+      ECU_SERVICE: ecu-abs
+  ecu-bms:
+    <<: *ecu
+    environment:
+      <<: *ecu-environment
+      ECU_SERVICE: ecu-bms
+  ecu-dynamics:
+    <<: *ecu
+    environment:
+      <<: *ecu-environment
+      ECU_SERVICE: ecu-dynamics
+  ecu-cluster:
+    <<: *ecu
+    environment:
+      <<: *ecu-environment
+      ECU_SERVICE: ecu-cluster
+  ecu-radar:
+    <<: *ecu
+    environment:
+      <<: *ecu-environment
+      ECU_SERVICE: ecu-radar
+  ecu-adas:
+    <<: *ecu
+    environment:
+      <<: *ecu-environment
+      ECU_SERVICE: ecu-adas
+  ecu-reserve:
+    <<: *ecu
+    environment:
+      <<: *ecu-environment
+      ECU_SERVICE: ecu-reserve
   simulator:
-    build: .
+    image: virtual-vehicle-controller:local
+    build:
+      context: .
+      target: simulator
     ports:
       - "127.0.0.1:${SIM_PORT:-8080}:8080"
     environment:
+      CLUSTER_TOKEN: ${CLUSTER_TOKEN:-local-development-token}
+      ECU_ENDPOINTS: '{"Motor ECU":"http://ecu-motor:8081","ABS ECU":"http://ecu-abs:8081","BMS ECU":"http://ecu-bms:8081","Dynamics ECU":"http://ecu-dynamics:8081","Instrument Cluster":"http://ecu-cluster:8081","Radar ECU":"http://ecu-radar:8081","ADAS ECU":"http://ecu-adas:8081"}'
+      ECU_SPARES: '["http://ecu-reserve:8081"]'
       AI_ENDPOINT: ${AI_ENDPOINT:-}
       AI_API_KEY: ${AI_API_KEY:-}
+    depends_on:
+      ecu-motor: {condition: service_healthy}
+      ecu-abs: {condition: service_healthy}
+      ecu-bms: {condition: service_healthy}
+      ecu-dynamics: {condition: service_healthy}
+      ecu-cluster: {condition: service_healthy}
+      ecu-radar: {condition: service_healthy}
+      ecu-adas: {condition: service_healthy}
+      ecu-reserve: {condition: service_healthy}
+    networks: [vehicle]
     init: true
     read_only: true
-    tmpfs:
-      - /tmp
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 2
+    pids_limit: 128
     restart: unless-stopped
+
+networks:
+  vehicle:
+    driver: bridge

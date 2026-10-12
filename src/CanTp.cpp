@@ -15,18 +15,32 @@ Can CanTp::waitFrame() {
         if (bus_->receive(frame, milliseconds(20)) && frame.getId() == rxId_) return frame;
     throw std::runtime_error("ISO-TP receive/flow-control timeout");
 }
+void CanTp::setLinkLength(unsigned length,bool fd) {
+    const std::vector<unsigned> legal={8,12,16,20,24,32,48,64};
+    if(std::find(legal.begin(),legal.end(),length)==legal.end()||(!fd&&length!=8))throw std::invalid_argument("Invalid ISO-TP link length");
+    linkLength_=length;fd_=fd;
+}
 void CanTp::transmit(const std::vector<uint8_t> &bytes) {
-    Can frame(txId_, bytes); frame.setFrameType(txId_ > 0x7ff); bus_->send(frame);
+    auto payload=bytes;
+    if(fd_) {
+        const std::vector<unsigned> sizes={0,1,2,3,4,5,6,7,8,12,16,20,24,32,48,64};
+        auto it=std::find_if(sizes.begin(),sizes.end(),[&](unsigned n){return n>=payload.size();});
+        if(it==sizes.end())throw std::invalid_argument("ISO-TP frame too long");
+        payload.resize(*it,0);
+    }
+    Can frame(txId_,payload);frame.setFrameType(txId_>0x7ff);frame.setFd(fd_,fd_);bus_->send(frame);
 }
 void CanTp::sendMessage(const std::string &message) {
     if (message.empty() || message.size() > 4095) throw std::invalid_argument("ISO-TP payload must be 1..4095 bytes");
-    if (message.size() <= 7) {
-        std::vector<uint8_t> bytes{static_cast<uint8_t>(message.size())};
+    if(message.size()<=(fd_&&linkLength_>8?linkLength_-2:7)) {
+        std::vector<uint8_t> bytes;
+        if(fd_&&linkLength_>8&&message.size()>7)bytes={0,static_cast<uint8_t>(message.size())};
+        else bytes={static_cast<uint8_t>(message.size())};
         bytes.insert(bytes.end(), message.begin(), message.end()); transmit(bytes); return;
     }
     std::vector<uint8_t> bytes{static_cast<uint8_t>(0x10 | (message.size() >> 8)), static_cast<uint8_t>(message.size())};
-    bytes.insert(bytes.end(), message.begin(), message.begin() + 6); transmit(bytes);
-    size_t offset = 6; uint8_t sequence = 1; unsigned waits = 0;
+    bytes.insert(bytes.end(), message.begin(), message.begin() + (linkLength_-2)); transmit(bytes);
+    size_t offset = linkLength_-2; uint8_t sequence = 1; unsigned waits = 0;
     while (offset < message.size()) {
         auto fc = waitFrame().getData();
         if (fc.size() < 3 || (fc[0] >> 4) != 3) throw std::runtime_error("Malformed ISO-TP flow control");
@@ -38,7 +52,7 @@ void CanTp::sendMessage(const std::string &message) {
         unsigned block = fc[1] == 0 ? 4095 : fc[1];
         for (unsigned i = 0; i < block && offset < message.size(); ++i) {
             std::this_thread::sleep_for(delay);
-            size_t count = std::min<size_t>(7, message.size() - offset);
+            size_t count = std::min<size_t>(linkLength_-1, message.size() - offset);
             bytes = {static_cast<uint8_t>(0x20 | sequence)};
             bytes.insert(bytes.end(), message.begin() + offset, message.begin() + offset + count);
             transmit(bytes); offset += count; sequence = (sequence + 1) & 15;
@@ -46,17 +60,18 @@ void CanTp::sendMessage(const std::string &message) {
     }
 }
 std::string CanTp::receiveMessage() {
-    auto bytes = waitFrame().getData();
+    auto first=waitFrame();auto bytes=first.getData();
     if (bytes.empty()) throw std::runtime_error("Empty ISO-TP frame");
     unsigned type = bytes[0] >> 4;
     if (type == 0) {
-        size_t length = bytes[0] & 15;
-        if (!length || length > 7 || bytes.size() < length + 1) throw std::runtime_error("Malformed ISO-TP single frame");
-        return std::string(bytes.begin() + 1, bytes.begin() + 1 + length);
+        size_t length=bytes[0]&15,header=1;
+        if(length==0&&first.isFd()&&bytes.size()>8) {length=bytes[1];header=2;}
+        if (!length || (header==1&&length>7) || bytes.size() < length + header) throw std::runtime_error("Malformed ISO-TP single frame");
+        return std::string(bytes.begin() + header, bytes.begin() + header + length);
     }
-    if (type != 1 || bytes.size() != 8) throw std::runtime_error("Malformed ISO-TP first frame");
+    if (type != 1 || bytes.size() < 8) throw std::runtime_error("Malformed ISO-TP first frame");
     size_t length = ((bytes[0] & 15) << 8) | bytes[1];
-    if (length <= 7) throw std::runtime_error("Invalid ISO-TP first-frame length");
+    if (length <= bytes.size()-2) throw std::runtime_error("Invalid ISO-TP first-frame length");
     std::string message(bytes.begin() + 2, bytes.end());
     uint8_t sequence = 1; unsigned received = 0;
     auto sendFC = [&]{

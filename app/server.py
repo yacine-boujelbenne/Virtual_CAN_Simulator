@@ -22,53 +22,7 @@ SCENARIO = os.environ.get("SIM_SCENARIO", str(ROOT / "resources/scenarios/ev_bas
 PORT = int(os.environ.get("PORT", "8080"))
 
 
-class Engine:
-    def __init__(self):
-        self.lock = threading.Lock()
-        self.process = subprocess.Popen([BINARY, SCENARIO], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                        text=True, bufsize=1, cwd=ROOT)
-        self.closed = threading.Event()
-        self.failure = None
-        self.request({"action": "snapshot"})
-        self.thread = threading.Thread(target=self._clock, daemon=True)
-        self.thread.start()
-
-    def request(self, command):
-        with self.lock:
-            if self.process.poll() is not None:
-                raise RuntimeError("C++ simulator exited")
-            self.process.stdin.write(json.dumps(command, allow_nan=False) + "\n")
-            self.process.stdin.flush()
-            if not select.select([self.process.stdout], [], [], 5)[0]:
-                self.process.kill()
-                raise RuntimeError("C++ simulator response timeout")
-            line = self.process.stdout.readline()
-            if not line:
-                raise RuntimeError("C++ simulator closed its output")
-            result = json.loads(line)
-            if "error" in result:
-                raise ValueError(result["error"])
-            return result
-
-    def _clock(self):
-        # Fixed simulation time: 100 ms per callback, independent of client polling.
-        while not self.closed.wait(0.1):
-            try:
-                self.request({"action": "advance", "count": 10})
-            except Exception as error:
-                self.failure = str(error)
-                self.closed.set()
-
-    def close(self):
-        self.closed.set()
-        self.thread.join(timeout=2)
-        with self.lock:
-            self.process.stdin.close()
-            try:
-                self.process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait()
+from controller import Engine
 
 
 def import_dbc(text):
@@ -91,7 +45,7 @@ def import_dbc(text):
             current = dict(name=name, id=identifier & 0x1fffffff, extended=extended,
                            dlc=int(dlc), direction="tx", period_ms=100, signals=[])
             if not 1 <= current["dlc"] <= 8:
-                raise ValueError("Only classic CAN DLC 1..8 is supported")
+                raise ValueError("DBC importer currently supports classic CAN; import JSON for CAN FD")
             messages.append(current)
         elif line.strip().startswith("SG_ "):
             match = signal_pattern.match(line)
@@ -186,9 +140,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path = self.path.split("?", 1)[0]
             if path == "/health":
-                self.server.engine.request({"action": "snapshot"})
-                if self.server.engine.failure:
-                    raise RuntimeError(self.server.engine.failure)
+                self.server.engine.request({"action": "cluster_ready"})
                 return self.send(200, {"status": "ok"})
             if path == "/api/state":
                 return self.send(200, self.server.engine.request({"action": "snapshot"}))
@@ -224,7 +176,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Request must be a JSON object")
             if self.path == "/api/command":
                 # Clock advancement is owned by the server.
-                if body.get("action") == "advance":
+                if body.get("action") in ("advance","prepare_tick","complete_tick","refresh_ecu","diagnostic_trace","cluster_ready"):
                     raise ValueError("Use step, run, or pause")
                 result = self.server.engine.request(body)
             elif self.path == "/api/dbc":

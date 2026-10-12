@@ -1,127 +1,117 @@
-# Virtual Vehicle Network & ECU Simulation Platform
+# ECU Lab · Distributed Vehicle Systems
 
-The `feature` branch evolves the C++ CAN simulator into a runnable five-ECU vehicle lab. One container serves the browser workspace and runs the C++ simulation. No host CAN device, privileged container, API key, frontend build step, or GoogleTest Git checkout is needed.
+The `feature` branch runs a container-based virtual vehicle network: **one main controller, seven independent ECU containers, and one reserve ECU container**. It includes CAN, CAN FD, ISO-TP diagnostics, synthetic radar and a functional ADAS closed loop.
 
-## Start the entire project
-
-Install Docker Desktop (Windows/macOS) or Docker Engine with Compose v2 (Linux), then:
+## Run the complete system
 
 ```sh
 git clone --branch feature https://github.com/yacine-boujelbenne/Virtual_CAN_Simulator.git
 cd Virtual_CAN_Simulator
-docker compose up --build -d --wait
+docker compose up --build -d --wait --wait-timeout 180
 ```
 
-Open **http://localhost:8080**. The repository is private: use your normal GitHub authentication when cloning. The web app has no login.
+Open **http://localhost:8080**. Your normal GitHub authentication is needed for this private repository.
 
 ```sh
-docker compose logs -f
+docker compose ps
+docker compose logs -f simulator
 docker compose down
 ```
 
-To change the host port, copy `.env.example` to `.env` and set `SIM_PORT=8090`, then reopen at that port. The default Compose mapping binds to localhost.
+Docker Desktop (Windows/macOS) or Docker Engine with Compose v2 (Linux) is required. There is no host CAN setup, privileged container, Docker socket mount, cloud API requirement or CDN dependency.
 
-## What works
+## One dashboard, five workspaces
 
-| Area | Implemented behavior |
+| Workspace | What it shows |
 |---|---|
-| C++ core | Classic CAN, isolated internal broadcast endpoints, optional SocketCAN endpoints, fixed 10 ms clock |
-| ISO-TP | Single/multi-frame transfers, 1–4095 byte payloads, block sizes including 0, peer STmin, sequence wrap, bounded timeouts |
-| Generic ECU runtime | JSON definitions, named inputs and variables, periodic tasks, restricted expression trees, state transitions, actuator bindings |
-| Signals | Intel/little-endian signed/unsigned integers, scaling and offsets, representable-range and overlap checks |
-| Vehicle | Simplified longitudinal acceleration, braking, wheel slip, motor RPM, energy use, battery SOC and temperatures, fan cooling |
-| Five demo ECUs | Motor, ABS, BMS, dynamics measurement, instrument cluster |
-| Sensors | Sampling, reproducible Gaussian noise, stuck value, disconnected, bias, amplified noise |
-| Diagnostics | Active/stored DTCs; UDS 0x10, 0x14, 0x19/02, 0x22, 0x3E via real ISO-TP framing over an internal CAN channel |
-| Browser workspace | Drag ECU nodes, live graphs, driver controls, inspector, CAN analyzer/decoded signals, DTCs, diagnostic tester |
-| Interoperability | Strict DBC subset importer, editable JSON, definition download, recent 200-frame CSV export |
-| ECU builder | Offline template selection; optional external AI adapter; all definitions validated before use |
+| Vehicle | Synthetic road scene, driver/ACC/AEB controls, seven ECU nodes, container health, virtual hardware and live telemetry |
+| Network control | Classic CAN/CAN FD segments, gateway routes, registry, message drop and latency policies |
+| CAN analyzer | Protocol, BRS, segment, IDs, byte length versus DLC, raw bytes, decoded signals and delivery/drop status |
+| Diagnostics | UDS requests over real ISO-TP framing to a selected ECU worker on classic CAN or CAN FD |
+| ECU builder | JSON editor, seven templates, strict DBC subset import, optional AI adapter, validation and reserve-container assignment |
 
-The UI is served locally and has **no CDN or JavaScript package dependencies**. It uses browser-native SVG and canvas; the C++ engine owns the simulation state. UI polling does not advance simulation time.
+The theme uses white, light green, green and charcoal. Purple is limited to a small navigation accent.
 
-## First experiments
-
-1. Click **Run simulation**; raise throttle to 60%. Observe speed, RPM, SOC, and CAN payloads.
-2. Click **Load ABS experiment**. This accelerates the vehicle for 20 simulated seconds, switches to low-friction braking, and starts the clock. Inspect ABS pressure/state.
-3. Select the motor temperature sensor, inject **stuck at 120**, and run/step. Motor torque is inhibited, fan command activates, P0217 is stored, and the cluster receives a warning.
-4. Restore the sensor. The fault recovers below the threshold, but its stored DTC remains.
-5. Open **Diagnose**, select Motor ECU, and read DTCs. Read the demonstration VIN to exercise a multi-frame response.
-6. Open **Design & build**, describe an ABS ECU, and build an offline preview. Review JSON, validate, then add an observation-only ECU.
-
-Raw templates reuse actuator owners and CAN IDs. Adding such a template without adapting them intentionally fails. Offline previews remove actuator bindings and allocate unused TX IDs. Definitions added in the UI are in-memory: reset/restart reloads the original scenario. Download JSON and add it to the scenario's `ecus` list to persist a model.
-
-## Architecture
+## Container layout
 
 ```mermaid
 flowchart TD
-  UI["Browser workspace"] --> API["Python HTTP bridge"]
-  API --> Runtime["C++ ECU runtime"]
-  Definitions["Validated JSON definitions"] --> Runtime
-  Plant["Vehicle model"] --> Sensors["Sampled sensors"]
-  Sensors --> Runtime
-  Runtime --> Actuators["Torque, brake, fan, contactor"]
-  Actuators --> Plant
-  Runtime <--> Bus["CAN and signal codec"]
-  Bus --> Cluster["Cluster and analyzer"]
-  API --> Diag["UDS tester"]
-  Diag --> TP["ISO-TP on internal CAN"]
-  TP --> Runtime
+    User["Browser dashboard"] --> Main["Main controller container"]
+    Main --> Plant["Vehicle and sensor model"]
+    Main --> Plane["Clock barrier and network policies"]
+    Plane --> CAN["Powertrain CAN broker"]
+    Plane --> FD["ADAS CAN FD broker"]
+    CAN <--> Group["Motor, ABS, BMS, Dynamics, Cluster"]
+    FD <--> Radar["Radar ECU container"]
+    FD <--> ADAS["ADAS ECU container"]
+    CAN <--> Gateway["Declared gateway routes"]
+    FD <--> Gateway
+    Main --> Reserve["Reserve ECU container"]
 ```
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for timing, units, schema, diagnostics and limitations.
+Every configured ECU container executes **one C++ behavior kernel**. Images are reused; ECU definitions configure their hardware profile and function. The central container computes the physical world, owns time and routes frames. It does not execute the distributed ECU tasks.
 
-## Native development (optional)
+Containers share Docker's host OS kernel. Virtual CPU/RAM/flash, I/O and watchdog behavior are functional models, not instruction-set or electrical hardware emulation. See [architecture](docs/ARCHITECTURE.md) and [protocol research](docs/PROTOCOL_RESEARCH.md).
 
-On Debian/Ubuntu:
+## Experiments
+
+1. **Drive:** run and increase throttle. Follow decoded speed/RPM/SOC, CAN traffic and container CPU-budget metrics.
+2. **Emergency braking:** click the AEB scenario. A 90 km/h ego vehicle approaches a stopped lead vehicle, 45 m away on a high-friction road. Follow radar FD frames, ADAS braking request, gateway delivery and ABS/motor response.
+3. **ABS:** click the low-friction experiment and inspect brake-pressure modulation.
+4. **Sensor failure:** inject a motor-temperature fault or disconnect the radar-distance sensor. Observe the owning ECU's DTC/state and downstream behavior.
+5. **Network failure:** drop Radar ECU traffic on the ADAS bus. The ADAS ECU detects a stale perception input.
+6. **Kernel failure:** select an ECU and halt it. The controller pauses the clock; other containers remain alive. Restore it and resume, or reset.
+7. **Diagnostics:** read the demonstration VIN on classic CAN, then CAN FD. Inspect the actual SF/FF/CF/FC records.
+8. **New ECU:** build an offline preview, review/validate it, and assign the reserve container. Reset releases that assignment.
+
+## Native development
 
 ```sh
 sudo apt-get install g++ cmake make libgtest-dev python3
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j2
 ctest --test-dir build --output-on-failure
-python3 app/server.py
+python3 tests/test_protocols.py -v
+python3 app/run_local.py
 ```
 
-Run HTTP checks while the server is running:
+The development launcher uses independent local processes instead of containers, with the same HTTP worker protocol. Production/default Compose uses separate containers. For a fast embedded-only development run, use `python3 app/server.py` without ECU_ENDPOINTS.
+
+While the distributed application runs:
 
 ```sh
 python3 tests/test_web.py -v
+python3 tests/test_distributed.py -v
 ```
 
-Optional DOM smoke test (test-only dependency):
+Optional UI DOM checks:
 ```sh
 npm install --prefix /tmp/vehicle-ui-check jsdom
 NODE_PATH=/tmp/vehicle-ui-check/node_modules node tests/test_ui.cjs
 ```
 
-The container build executes C++ tests; GitHub Actions additionally starts the image and executes HTTP integration checks. Building just the runtime without tests is supported with `-DBUILD_TESTING=OFF`.
+The container build runs C++ tests. GitHub CI starts all nine services, checks their distinct container identities and runs HTTP/distributed integration tests.
 
-The console executable accepts one JSON command per line:
+## Definition and hardware model
 
-```sh
-printf '%s\n' '{"action":"controls","values":{"throttle":0.6}}' '{"action":"step","count":1000}' | ./build/vehicle_sim
-```
+[resources/ecu.schema.json](resources/ecu.schema.json) describes the shape. C++ validation also checks signal range/overlap, references, timing, TX collisions, RX interfaces and actuator ownership.
 
-Core commands: `snapshot`, `run`, `pause`, `reset`, `step`, `controls`, `fault`, `validate`, `add_ecu`, `diagnostic`. The HTTP service drives `advance` internally every 100 ms. A delayed callback slows wall-clock playback; it does not change the fixed integration step.
+Definitions contain inputs, variables, periodic restricted-expression tasks, states, CAN messages, DTCs and a hardware profile. CAN FD uses legal wire lengths: 0–8, 12, 16, 20, 24, 32, 48 or 64 bytes. A signal may start above bit 64; it is packed into the full payload.
+
+Modeled task cost scales with virtual CPU clock. Kernel snapshots report modeled CPU load and RAM/flash use. Compose separately limits actual container resources. A missing worker prevents a partial tick from advancing; duplicate retries return cached results.
+
+Messages added through the UI are ephemeral. Download JSON and declare its path in the scenario plus its dedicated worker mapping in Compose to retain it. Extra simultaneous ECUs need extra worker services; no main-container fallback is used.
 
 ## Optional AI adapter
 
-Without configuration, `/api/generate` selects a local template. It **does not call an LLM or implement semantic RAG**. It reports the actual provider.
+Without AI_ENDPOINT, the builder selects a local template and clearly reports that no LLM was called. The external adapter receives prompt/templates/schema_version and must return `{"definition": {...}}`. Its output is validated before assignment. Set AI_ENDPOINT and optional AI_API_KEY in `.env`; reachability is from the controller container. The current adapter contract is provider independent; a production RAG stack is not included.
 
-Set `AI_ENDPOINT` to your provider adapter URL and optionally `AI_API_KEY` in `.env`. The adapter receives:
+## Scope
 
-```json
-{"prompt":"Create a controller...","templates":{"abs":{},"bms":{}},"schema_version":1}
-```
+This is functional software-in-the-loop for learning and experimentation. It does not reproduce proprietary ECU firmware or implement a full ADS. CAN priority and estimated serialization are modeled; electrical errors, bit-exact CRC/stuffing, bus-off/recovery and real-time deadlines are not. ISO-TP supports normal addressing and 1–4095-byte PDUs. Diagnostic session/security gating, full automotive Ethernet/DoIP, raw perception, steering/lane models, hardware/HIL and persistent trace/replay remain future work.
 
-It must return `{"definition": {...}}` within 45 seconds. It can use any LLM/RAG implementation behind that contract. The key is sent as a bearer token to the configured endpoint; it is never sent to the browser. Configure a reachable container-network URL; localhost inside the container refers to the container itself. Returned definitions pass the C++ validator and a separate network check when added. The simulator never compiles or executes generated source code.
-
-## Scope and next milestones
-
-This is a complete **educational V1**. It is not a validated production-vehicle model or a complete UDS/ISO standards implementation. CAN priority is ordered within each tick; serialization timing, bit stuffing, error confinement, bus-off and overload scheduling are not modeled. Diagnostics use an isolated internal bus and a selected virtual target, not per-ECU production diagnostic IDs. UDS sessions are acknowledged but do not gate other services. VIN/speed DIDs and DTC wire codes are demonstration conventions.
-
-SocketCAN is an optional library endpoint, not the default dashboard backend; creating `vcan` remains an operator task. CAN FD, Motorola/multiplexed DBC, OBD-II, gateways, hardware integration, native plugin loading, sophisticated ABS/thermal physics, persistent trace/replay and production RAG are future milestones. No proprietary OEM controller firmware is reproduced.
+[Protocol research](docs/PROTOCOL_RESEARCH.md) records primary Linux and NHTSA sources and the exact boundaries.
 
 ## Third-party code
 
-`headers/json.hpp` is the original vendored nlohmann/json header with its MIT license notices retained. GoogleTest is installed as a build dependency. No code or datasets from the reference ECU repositories were copied.
+The original vendored nlohmann/json MIT header/notices are retained. GoogleTest is a build dependency. No proprietary standards text or OEM firmware is distributed.

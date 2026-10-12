@@ -1,0 +1,209 @@
+{
+  "schema_version": 1,
+  "name": "Radar ECU",
+  "inputs": [
+    "ignition",
+    "radar_distance_sensor",
+    "closing_speed_sensor"
+  ],
+  "variables": {
+    "object_range": 120,
+    "object_closing_speed": 0,
+    "object_confidence": 100,
+    "radar_valid": 1,
+    "radar_fault": 0
+  },
+  "tasks": [
+    {
+      "name": "radar_sampling",
+      "period_ms": 10,
+      "cost_us": 200,
+      "assign": {
+        "object_range": "radar_distance_sensor",
+        "object_closing_speed": "closing_speed_sensor",
+        "radar_fault": {
+          "op": "or",
+          "args": [
+            {
+              "op": "gt",
+              "args": [
+                "radar_distance_sensor",
+                600
+              ]
+            },
+            {
+              "op": "lt",
+              "args": [
+                "radar_distance_sensor",
+                0
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "radar_validity",
+      "period_ms": 10,
+      "cost_us": 150,
+      "assign": {
+        "radar_valid": {
+          "op": "eq",
+          "args": [
+            "radar_fault",
+            0
+          ]
+        },
+        "object_confidence": {
+          "op": "if",
+          "args": [
+            "radar_fault",
+            0,
+            100
+          ]
+        }
+      }
+    }
+  ],
+  "bindings": {},
+  "messages": [
+    {
+      "name": "RadarObjectList",
+      "id": 1024,
+      "direction": "tx",
+      "period_ms": 20,
+      "dlc": 32,
+      "fd": true,
+      "brs": true,
+      "bus": "adas",
+      "signals": [
+        {
+          "name": "object_range",
+          "start": 0,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "object_closing_speed",
+          "start": 16,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "object_confidence",
+          "start": 80,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "radar_valid",
+          "start": 96,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ]
+    }
+  ],
+  "state_machine": {
+    "initial": "OFF",
+    "states": [
+      "OFF",
+      "RUN",
+      "FAULT"
+    ],
+    "transitions": [
+      {
+        "from": "OFF",
+        "to": "RUN",
+        "when": "ignition"
+      },
+      {
+        "from": "RUN",
+        "to": "FAULT",
+        "when": "radar_fault"
+      },
+      {
+        "from": "FAULT",
+        "to": "RUN",
+        "when": {
+          "op": "eq",
+          "args": [
+            "radar_fault",
+            0
+          ]
+        }
+      },
+      {
+        "from": "RUN",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "dtcs": [
+    {
+      "code": "C1A10",
+      "uds_code": 12689664,
+      "name": "Forward radar unavailable",
+      "severity": "warning",
+      "trigger": "radar_fault",
+      "recover": {
+        "op": "eq",
+        "args": [
+          "radar_fault",
+          0
+        ]
+      }
+    }
+  ],
+  "assumptions": [
+    "Functional software-in-the-loop demonstration; not production ADAS/ADS.",
+    "Radar observations are synthetic sensor measurements, not raw camera/radar perception."
+  ],
+  "hardware": {
+    "cpu_mhz": 160,
+    "ram_kib": 128,
+    "flash_kib": 512,
+    "task_budget_us": 8000,
+    "adc": {
+      "resolution_bits": 12,
+      "channels": {}
+    },
+    "can_controller": {
+      "fd_capable": true,
+      "rx_fifo_frames": 128
+    },
+    "gpio_outputs": []
+  },
+  "domain": "Perception"
+}

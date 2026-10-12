@@ -170,6 +170,58 @@
       "items": {
         "type": "string"
       }
+    },
+    "hardware": {
+      "type": "object",
+      "properties": {
+        "cpu_mhz": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 2000
+        },
+        "ram_kib": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "flash_kib": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "task_budget_us": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "adc": {
+          "type": "object"
+        },
+        "can_controller": {
+          "type": "object"
+        },
+        "gpio_outputs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "freshness_inputs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "bus": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "$defs": {
@@ -237,7 +289,7 @@
         "start": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 63
+          "maximum": 511
         },
         "length": {
           "type": "integer",
@@ -291,7 +343,7 @@
         "dlc": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 8
+          "maximum": 64
         },
         "direction": {
           "enum": [
@@ -310,6 +362,15 @@
           "items": {
             "$ref": "#/$defs/signal"
           }
+        },
+        "fd": {
+          "type": "boolean"
+        },
+        "brs": {
+          "type": "boolean"
+        },
+        "bus": {
+          "type": "string"
         }
       },
       "allOf": [

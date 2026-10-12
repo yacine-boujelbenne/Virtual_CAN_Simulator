@@ -1,5 +1,6 @@
 #pragma once
 #include "CanBus.hpp"
+#include "EcuKernel.hpp"
 #include "json.hpp"
 #include <map>
 #include <memory>
@@ -8,7 +9,7 @@
 using Json = nlohmann::json;
 class SimulationManager {
 public:
-    explicit SimulationManager(const std::string &scenarioPath);
+    explicit SimulationManager(const std::string &scenarioPath, bool distributed = false);
     Json command(const Json &request);
     Json snapshot() const;
     void step(unsigned count = 1);
@@ -20,6 +21,8 @@ private:
         std::string state;
         std::unique_ptr<CanBus> bus;
         std::map<std::string,bool> dtcActive, dtcStored;
+        std::unique_ptr<EcuKernel> kernel;
+        Json inbox=Json::array(), hardware=Json::object();
     };
     std::string scenarioPath_, channel_;
     Json scenario_, sensors_, frames_ = Json::array(), events_ = Json::array();
@@ -29,7 +32,14 @@ private:
     std::mt19937 random_{42};
     unsigned stepMs_ = 10;
     uint64_t tick_ = 0, frameCount_ = 0, frameBits_ = 0;
-    bool running_ = false;
+    bool running_ = false, distributed_ = false;
+    uint64_t epoch_=0;
+    Json prepared_=nullptr, policies_=Json::array(), scheduled_=Json::array();
+    std::map<std::string,double> busFreeUs_, busBusyUs_;
+    uint64_t dropped_=0;
+    Json prepareTick();
+    Json completeTick(const Json &results);
+    void transmit(const std::string &source, const Json &message, const Can &frame, const std::string &bus, bool gateway = false);
     void reset();
     void tick();
     void loadEcu(const Json &definition);

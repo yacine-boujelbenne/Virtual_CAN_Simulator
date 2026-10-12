@@ -8,14 +8,34 @@
     "wheel_fl_sensor",
     "wheel_fr_sensor",
     "wheel_rl_sensor",
-    "wheel_rr_sensor"
+    "wheel_rr_sensor",
+    "aeb_request",
+    "acc_throttle",
+    "acc_active",
+    "fcw",
+    "time_to_collision"
   ],
   "variables": {
     "wheel_slip": 0,
     "abs_active": 0,
-    "pressure": 0
+    "pressure": 0,
+    "combined_brake": 0
   },
   "tasks": [
+    {
+      "name": "brake_request_arbitration",
+      "period_ms": 10,
+      "cost_us": 100,
+      "assign": {
+        "combined_brake": {
+          "op": "max",
+          "args": [
+            "brake",
+            "aeb_request"
+          ]
+        }
+      }
+    },
     {
       "name": "slip",
       "period_ms": 10,
@@ -85,7 +105,7 @@
                 {
                   "op": "gt",
                   "args": [
-                    "brake",
+                    "combined_brake",
                     0.05
                   ]
                 },
@@ -113,11 +133,11 @@
             {
               "op": "mul",
               "args": [
-                "brake",
+                "combined_brake",
                 0.45
               ]
             },
-            "brake"
+            "combined_brake"
           ]
         }
       }
@@ -170,7 +190,81 @@
           "byte_order": "little_endian"
         }
       ],
-      "period_ms": 20
+      "period_ms": 20,
+      "bus": "powertrain",
+      "fd": false,
+      "brs": false
+    },
+    {
+      "name": "ADASControl",
+      "id": 1104,
+      "direction": "rx",
+      "dlc": 8,
+      "fd": false,
+      "brs": false,
+      "bus": "powertrain",
+      "signals": [
+        {
+          "name": "aeb_request",
+          "start": 0,
+          "length": 16,
+          "factor": 0.0001,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "acc_throttle",
+          "start": 16,
+          "length": 16,
+          "factor": 0.0001,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "acc_active",
+          "start": 32,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "fcw",
+          "start": 33,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "time_to_collision",
+          "start": 40,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 99,
+          "unit": "s",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ]
     }
   ],
   "state_machine": {
@@ -230,5 +324,26 @@
   "assumptions": [
     "Generic educational model; not an OEM controller.",
     "Classic CAN, little-endian signals, 10 ms simulation step."
-  ]
+  ],
+  "hardware": {
+    "cpu_mhz": 120,
+    "ram_kib": 128,
+    "flash_kib": 512,
+    "task_budget_us": 8000,
+    "adc": {
+      "resolution_bits": 12,
+      "channels": {
+        "brake": [
+          0,
+          1
+        ]
+      }
+    },
+    "can_controller": {
+      "fd_capable": true,
+      "rx_fifo_frames": 128
+    },
+    "gpio_outputs": []
+  },
+  "domain": "Chassis"
 }

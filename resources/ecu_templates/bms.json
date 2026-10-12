@@ -135,7 +135,10 @@
           "byte_order": "little_endian"
         }
       ],
-      "period_ms": 100
+      "period_ms": 100,
+      "bus": "powertrain",
+      "fd": false,
+      "brs": false
     }
   ],
   "state_machine": {
@@ -236,5 +239,36 @@
   "assumptions": [
     "Generic educational model; not an OEM controller.",
     "Classic CAN, little-endian signals, 10 ms simulation step."
-  ]
+  ],
+  "hardware": {
+    "cpu_mhz": 120,
+    "ram_kib": 128,
+    "flash_kib": 512,
+    "task_budget_us": 8000,
+    "adc": {
+      "resolution_bits": 12,
+      "channels": {
+        "battery_temperature_sensor": [
+          -40,
+          100
+        ],
+        "voltage_sensor": [
+          0,
+          600
+        ],
+        "current_sensor": [
+          -300,
+          300
+        ]
+      }
+    },
+    "can_controller": {
+      "fd_capable": true,
+      "rx_fifo_frames": 128
+    },
+    "gpio_outputs": [
+      "power_permit"
+    ]
+  },
+  "domain": "Energy"
 }

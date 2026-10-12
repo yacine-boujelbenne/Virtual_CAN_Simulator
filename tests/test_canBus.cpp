@@ -19,3 +19,11 @@ TEST(CanBusTest, ChannelIsolationAndBounds) {
 TEST(CanBusTest, MissingSocketCanInterfaceFailsCleanly) {
     CanBus bus(CanBus::Backend::SocketCAN,"missing999");EXPECT_FALSE(bus.init());EXPECT_FALSE(bus.init());
 }
+TEST(CanBusTest, CanFdPayloadFlagsAndWireLengthValidation) {
+    CanBus a(CanBus::Backend::Internal,"fd-bus"),b(CanBus::Backend::Internal,"fd-bus");a.init();b.init();
+    Can frame(0x123,std::vector<uint8_t>(64,0xab));frame.setFd(true,true);a.send(frame);
+    Can received;ASSERT_TRUE(b.receive(received,std::chrono::milliseconds(0)));
+    EXPECT_TRUE(received.isFd());EXPECT_TRUE(received.bitrateSwitch());EXPECT_EQ(received.getData().size(),64U);
+    Can malformed(0x123,std::vector<uint8_t>(9,0));malformed.setFd(true,true);
+    EXPECT_THROW(a.send(malformed),std::invalid_argument);
+}

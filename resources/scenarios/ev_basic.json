@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "EV \u00b7 Five ECU Demonstrator",
+  "name": "Distributed EV \u00b7 ADAS Laboratory",
   "step_ms": 10,
   "bitrate": 500000,
   "initial_state": {
@@ -105,6 +105,24 @@
       "unit": "m/s",
       "period_ms": 10,
       "noise": 0
+    },
+    {
+      "name": "radar_distance_sensor",
+      "source": "lead_distance",
+      "min": 0,
+      "max": 600,
+      "unit": "m",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "closing_speed_sensor",
+      "source": "closing_speed",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
     }
   ],
   "ecus": [
@@ -112,6 +130,36 @@
     "../ecu_templates/abs.json",
     "../ecu_templates/bms.json",
     "../ecu_templates/dynamics.json",
-    "../ecu_templates/cluster.json"
+    "../ecu_templates/cluster.json",
+    "../ecu_templates/radar.json",
+    "../ecu_templates/adas.json"
+  ],
+  "buses": [
+    {
+      "id": "powertrain",
+      "name": "Powertrain CAN",
+      "bitrate": 500000,
+      "data_bitrate": 500000,
+      "fd": false
+    },
+    {
+      "id": "adas",
+      "name": "ADAS CAN FD",
+      "bitrate": 500000,
+      "data_bitrate": 2000000,
+      "fd": true
+    }
+  ],
+  "gateway_routes": [
+    {
+      "id": 288,
+      "from": "powertrain",
+      "to": "adas"
+    },
+    {
+      "id": 1104,
+      "from": "adas",
+      "to": "powertrain"
+    }
   ]
 }

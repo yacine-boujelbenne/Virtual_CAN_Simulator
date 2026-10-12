@@ -14,7 +14,7 @@ def request(path, body=None):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(URL + path, data=data,
                                  headers={"Content-Type": "application/json"} if data else {})
-    with urllib.request.urlopen(req, timeout=10) as response:
+    with urllib.request.urlopen(req, timeout=90) as response:
         text = response.read().decode()
         return json.loads(text) if response.headers.get_content_type() == "application/json" else text
 
@@ -25,7 +25,7 @@ class WebIntegration(unittest.TestCase):
 
     def test_health_and_all_browser_assets(self):
         self.assertEqual(request("/health")["status"], "ok")
-        self.assertIn("Vector Lab", request("/"))
+        self.assertIn("ECU Lab", request("/"))
         self.assertIn("function render", request("/app.js"))
         self.assertIn("--cyan", request("/style.css"))
 
@@ -54,7 +54,7 @@ class WebIntegration(unittest.TestCase):
         self.assertTrue(result["validated"])
         self.assertFalse(result["definition"]["bindings"])
         state = request("/api/command", {"action": "add_ecu", "definition": result["definition"]})
-        self.assertEqual(len(state["ecus"]), 6)
+        self.assertEqual(len(state["ecus"]), 8)
         request("/api/command", {"action": "step", "count": 20})
 
     def test_dbc_import_and_rejection(self):

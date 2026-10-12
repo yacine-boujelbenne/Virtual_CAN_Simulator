@@ -26,3 +26,15 @@ TEST(CanTpTest, BoundsAndTimeout) {
     EXPECT_THROW(tx.sendMessage(std::string(4096,'x')),std::invalid_argument);
     EXPECT_THROW(tx.sendMessage(std::string(50,'x')),std::runtime_error);
 }
+TEST(CanTpTest, CanFdSingleEscapeAndMultiFrameTransfers) {
+    CanBus a(CanBus::Backend::Internal,"fd-transport"),b(CanBus::Backend::Internal,"fd-transport");a.init();b.init();
+    CanTp tx(0x700,0x708,a),rx(0x708,0x700,b);
+    for(unsigned link:{12,32,64}) {
+        tx.setLinkLength(link);rx.setLinkLength(link);rx.setbs(1);
+        for(unsigned size:{1,7,8,10,31,62,63,140,4095}) {
+            std::string message(size,'F');
+            auto incoming=std::async(std::launch::async,[&]{return rx.receiveMessage();});
+            tx.sendMessage(message);EXPECT_EQ(incoming.get(),message);
+        }
+    }
+}

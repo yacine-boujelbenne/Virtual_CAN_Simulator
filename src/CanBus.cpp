@@ -48,6 +48,8 @@ bool CanBus::init() {
     sockaddr_can address{}; address.can_family = AF_CAN;
     if (ioctl(socket_fd, SIOCGIFINDEX, &request) < 0) {closeSocket(); return false;}
     address.can_ifindex = request.ifr_ifindex;
+    int enableFd=1;
+    if(setsockopt(socket_fd,SOL_CAN_RAW,CAN_RAW_FD_FRAMES,&enableFd,sizeof(enableFd))<0) {closeSocket();return false;}
     int own = loopback_ ? 1 : 0;
     if (setsockopt(socket_fd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &own, sizeof(own)) < 0 ||
         bind(socket_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) < 0) {closeSocket(); return false;}
@@ -57,7 +59,9 @@ bool CanBus::init() {
 #endif
 }
 void CanBus::send(const Can &frame) {
-    if (frame.getData().size() > 8 || frame.getId() > (frame.isExtendedFrame() ? 0x1fffffffU : 0x7ffU))
+    const auto length=frame.getData().size();
+    const std::vector<size_t> legal={0,1,2,3,4,5,6,7,8,12,16,20,24,32,48,64};
+    if (length > (frame.isFd()?64U:8U) || (frame.isFd() && std::find(legal.begin(),legal.end(),length)==legal.end()) || frame.getId() > (frame.isExtendedFrame() ? 0x1fffffffU : 0x7ffU))
         throw std::invalid_argument("Invalid classic CAN ID or DLC");
     if (backend_ == Backend::Internal) {
         if (!endpoint_) throw std::runtime_error("CAN endpoint is not initialized");
@@ -76,10 +80,11 @@ void CanBus::send(const Can &frame) {
     }
 #ifdef __linux__
     if (socket_fd < 0) throw std::runtime_error("SocketCAN endpoint is not initialized");
-    can_frame raw{}; raw.can_id = frame.getId() | (frame.isExtendedFrame() ? CAN_EFF_FLAG : 0);
-    raw.can_dlc = static_cast<__u8>(frame.getData().size());
-    std::copy(frame.getData().begin(), frame.getData().end(), raw.data);
-    if (write(socket_fd, &raw, sizeof(raw)) != sizeof(raw)) throw std::runtime_error("SocketCAN write failed");
+    canfd_frame raw{}; raw.can_id = frame.getId() | (frame.isExtendedFrame() ? CAN_EFF_FLAG : 0);
+    raw.len=static_cast<__u8>(frame.getData().size());raw.flags=frame.bitrateSwitch()?CANFD_BRS:0;
+    std::copy(frame.getData().begin(),frame.getData().end(),raw.data);
+    const size_t mtu=frame.isFd()?CANFD_MTU:CAN_MTU;
+    if(write(socket_fd,&raw,mtu)!=static_cast<ssize_t>(mtu))throw std::runtime_error("SocketCAN write failed");
 #endif
 }
 bool CanBus::receive(Can &frame, std::chrono::milliseconds timeout) {
@@ -93,12 +98,12 @@ bool CanBus::receive(Can &frame, std::chrono::milliseconds timeout) {
     if (socket_fd < 0) return false;
     pollfd descriptor{socket_fd, POLLIN, 0};
     if (poll(&descriptor, 1, static_cast<int>(timeout.count())) <= 0) return false;
-    can_frame raw{};
-    if (read(socket_fd, &raw, sizeof(raw)) != sizeof(raw) || raw.can_dlc > 8 ||
-        (raw.can_id & (CAN_ERR_FLAG | CAN_RTR_FLAG))) return false;
-    bool extended = (raw.can_id & CAN_EFF_FLAG) != 0;
-    frame = Can(raw.can_id & (extended ? CAN_EFF_MASK : CAN_SFF_MASK), {raw.data, raw.data + raw.can_dlc});
-    frame.setFrameType(extended); return true;
+    canfd_frame raw{};ssize_t count=read(socket_fd,&raw,sizeof(raw));
+    bool fd=count==CANFD_MTU;
+    if((count!=CAN_MTU&&!fd)||raw.len>(fd?64:8)||(raw.can_id&(CAN_ERR_FLAG|CAN_RTR_FLAG)))return false;
+    bool extended=(raw.can_id&CAN_EFF_FLAG)!=0;
+    frame=Can(raw.can_id&(extended?CAN_EFF_MASK:CAN_SFF_MASK),{raw.data,raw.data+raw.len});
+    frame.setFrameType(extended);frame.setFd(fd,fd&&(raw.flags&CANFD_BRS));return true;
 #else
     return false;
 #endif

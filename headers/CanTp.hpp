@@ -7,6 +7,7 @@ class CanTp {
 public:
     CanTp(uint32_t txId, uint32_t rxId, CanBus &bus);
     CanTp(uint32_t txId, uint32_t rxId);
+    void setLinkLength(unsigned length, bool fd = true);
     static constexpr uint8_t staticBS = 255, staticST = 127;
     void sendMessage(const std::string &message);
     void sendMessageP(const std::string &message) {sendMessage(message);}
@@ -26,4 +27,6 @@ private:
     std::unique_ptr<CanBus> owned_;
     CanBus *bus_;
     uint8_t bs_ = 8, st_ = 0;
+    unsigned linkLength_=8;
+    bool fd_=false;
 };

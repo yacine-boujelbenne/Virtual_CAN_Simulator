@@ -1,104 +1,95 @@
-# Runtime and ECU contract
+# Distributed ECU simulation architecture
 
-## One connected loop
+## Containers and responsibilities
 
-The physical plant stores real vehicle values. Sensors sample those values and apply faults/noise. ECU tasks read their declared inputs and prior CAN receive values, update internal variables, change state and diagnostic status, and issue actuator commands. Actuators affect the next physical integration step. The cluster gets its displayed speed/RPM/SOC/warnings from decoded CAN receive signals.
-
-The five roles are:
-- Motor: throttle to torque, temperature monitoring, fan command; receives BMS power permission.
-- ABS: four wheel measurements and speed estimate to slip, active state and brake pressure.
-- BMS: SOC/current/voltage/temperature monitoring and power-contactor permission.
-- Dynamics: measured vehicle speed/RPM to CAN.
-- Cluster: receives those four ECUs' messages and updates displayed values.
-
-## Time and delivery
-
-A tick is exactly 10 ms. The JSON scenario can use 1–100 ms; task, sensor and TX periods must be integer multiples of that step. Periodic tasks fire at time zero. Tasks follow their listed order; assignments within a task read the same prior variable snapshot. At most one state transition is applied per tick. State names describe behavior; task execution is not automatically disabled by OFF/FAULT. Controller definitions explicitly inhibit torque/power when required.
-
-Per tick:
-1. Sample sensors due at this time.
-2. For each ECU, update physical/control inputs and decode queued CAN frames.
-3. Execute due tasks, state transitions, DTC trigger/recovery and output bindings.
-4. Encode due TX messages and sort numeric IDs for deterministic priority ordering.
-5. Broadcast frames. Receiving ECUs consume them in the next tick.
-6. Integrate vehicle equations and increment the clock.
-
-Internal endpoints share a channel; every endpoint gets its own bounded receive queue. They do not see their own frames by default. Each simulation instance has an isolated channel. In-memory queuing is broadcast delivery, not a CAN electrical/error-state emulation.
-
-## Physical units and simplifications
-
-| Quantity | Internal unit |
+| Container/service | Responsibility |
 |---|---|
-| Vehicle/wheel tangential speed | m/s |
-| Cluster speed / VehicleStatus signal | km/h |
-| Acceleration | m/s² |
-| Position | m |
-| Torque | Nm |
-| RPM | rev/min |
-| Temperature | °C |
-| Voltage/current | V/A |
-| SOC | percent 0–100 |
-| Throttle/brake/pressure/friction | ratio 0–1 |
+| simulator | Dashboard/API, central C++ vehicle/world model, sampled sensors, clock barrier, bus broker, gateway and flow-policy control |
+| ecu-motor | One C++ motor-control kernel |
+| ecu-abs | One C++ braking/ABS kernel |
+| ecu-bms | One C++ battery-management kernel |
+| ecu-dynamics | One C++ measured vehicle-status kernel |
+| ecu-cluster | One C++ instrument-cluster kernel; displayed values come from decoded CAN |
+| ecu-radar | One C++ synthetic radar-interface kernel; 32-byte CAN FD transmission |
+| ecu-adas | One C++ FCW/AEB/ACC kernel; consumes radar and vehicle-speed frames |
+| ecu-reserve | One initially unconfigured kernel process, available to an imported ECU definition |
 
-The demonstrator uses 1500 kg, a 0.32 m wheel radius, a fixed 9:1 driveline and a 60 kWh battery. Traction is torque × 9 / radius. Braking is limited by road friction × mass × gravity. Aerodynamic/rolling resistance opposes forward motion. Speed integrates acceleration. Wheel slip is a deliberately simplified algebraic relationship between brake pressure and road friction. ABS applies/reduces pressure using a threshold; it is not a validated per-wheel hydraulic model.
+The eight ECU services reuse one small image, with one behavior instance per container. Sharing an image avoids duplicating identical runtime dependencies; definitions give each ECU its function. Each configured container has exactly one C++ ECU kernel and a small Python transport adapter. The controller holds mirrored status for display/validation, but does not execute the remote ECU tasks in distributed mode.
 
-Motor power drives battery SOC decrease and approximate thermal heating; fan output strengthens motor cooling. No regeneration or gear shifting is included. The dynamics/control/fault thresholds are educational assumptions, not OEM specifications.
+Containers share the host operating-system kernel. A virtual ECU's CPU clock, RAM, flash, task budget, inputs and CAN controller are functional simulation parameters. This is not a Docker-based MCU instruction-set emulator.
 
-Physical signals saturate at configured encoding ranges when transmitted. Measured normal sensors are clamped to their declared range; disconnected/stuck fault readings can exceed it to test fault detection. Sensors with noise use a fixed seed of 42. The default scenario has zero normal noise so baseline replay is deterministic.
+## Coordinated clock
 
-## ECU JSON
+Each simulation step is exactly 10 ms:
 
-Every definition contains:
-- `schema_version: 1` and a unique `name`.
-- `inputs`: declared controls/sensors or received CAN signals.
-- `variables`: initialized numeric state.
-- `tasks`: name, period_ms and simultaneous `assign` map.
-- `bindings`: actuator-name to variable-name map; only one ECU can own an actuator.
-- `state_machine`: initial state, known states, ordered from/to/when transitions.
-- `messages`: TX/RX ID, DLC and signal layouts; TX additionally has period_ms.
-- `dtcs`: display code, 24-bit demonstration UDS wire code, name, severity, trigger and recovery expressions.
-- `assumptions`: human-readable model notes.
+1. The central world samples sensors and releases bus frames whose simulated arrival time is due.
+2. It creates one immutable tick/epoch input for each ECU worker.
+3. Workers execute their own tasks, state transitions, diagnostic logic and signal encoding concurrently.
+4. The main controller waits for every required worker. It validates their tick numbers and declared frame outputs.
+5. Only a complete barrier commits ECU outputs, queues CAN messages, integrates the physical world and advances time.
 
-A signal has `name, start, length, factor, offset, min, max, unit, signed, byte_order`. Length is 1–32 bits, classic CAN DLC is 1–8 bytes. This V1 supports only little-endian integer layouts. Raw values are rounded, physical output values are saturated, and encoding capacity is checked before loading. RX/TX layouts on the same ID must match exactly.
+A failed worker leaves simulation time unchanged. Completed workers cache the last tick result, so retrying a partially completed barrier does not execute their tasks twice. Missing/out-of-order ticks are rejected. Reset increments the epoch and reconfigures the workers. A stopped/restarted container needs a scenario reset to recover its lost state.
 
-Expressions are numbers, booleans, declared signal names, or objects:
-```json
-{"op":"if","args":[{"op":"gt","args":["temperature_sensor",90]},1,0]}
-```
+Polling the browser never advances simulation time. Wall-clock playback can be slower than simulated time if networking or execution is slow; this is deterministic functional SIL, not a hard real-time scheduler.
 
-Allowed operations: add, sub, mul, div, gt, lt, ge, le, eq, and, or, min, max, if. Binary operators take two args; if takes three. Expressions are bounded to 24 nesting levels. Names are resolved explicitly. There is no arbitrary code, eval or subprocess execution in an ECU definition. Zero division and non-finite results fail with an error.
+## Data plane and control plane
 
-[ecu.schema.json](../resources/ecu.schema.json) describes the file shape. C++ validation is authoritative for cross-field constraints: signal capacity/overlap, references, timing, state membership, and network collision/dependency checks.
+Two modeled segments are configured:
 
-## DTC lifecycle and demonstration UDS
+- **powertrain:** classic CAN, 500 kbit/s.
+- **adas:** CAN FD capable, 500 kbit/s nominal, 2 Mbit/s data bitrate.
 
-A trigger makes a DTC active and stored. Recovery clears active status, preserving stored status. ClearDiagnosticInformation clears fault memory; an underlying persistent fault relatches at the next tick.
+The Docker bridge carries HTTP coordination. It does not stand in for CAN electrical signaling. The main C++ broker carries encoded CAN frames between logical bus members. Receivers decode only declared interfaces on their segment.
 
-The UDS tester performs actual single/multi-frame CAN-TP segmentation, flow control, sequence handling and reassembly between concurrent endpoints on an isolated internal bus. The selected ECU supplies its DTC memory.
+Gateway routes:
+- 0x120 VehicleStatus: powertrain → adas.
+- 0x450 ADASControl: adas → powertrain.
 
-| Request | Response behavior |
-|---|---|
-| 10 01 / 02 / 03 | 50 session + demonstration P2 timing acknowledgment |
-| 3E 00 | 7E 00 |
-| 22 F1 90 | 62 F1 90 + 17-byte simulated VIN |
-| 22 F2 00 | 62 F2 00 + speed in unsigned 0.01 km/h |
-| 19 02 mask | 59 02 09 + stored DTC records; status bit0 active, bit3 stored |
-| 14 FF FF FF | 54; clear selected ECU DTC memory |
-| Unsupported SID | 7F SID 11 |
-| Unsupported subfunction | 7F SID 12 |
-| Wrong length | 7F SID 13 |
-| Unsupported DID/group | 7F SID 31 |
+FD frames are not forwarded unchanged onto a classic-only bus. The broker sorts pending requests by their CAN arbitration field, including the standard/extended-ID relationship. Serialization estimates distinguish nominal/data bitrates, frame length and BRS. A conservative overhead allowance replaces a bit-exact stuffing/CRC model.
 
-Unsupported services include security access, reset, routine control, write-DID and programming. The selected-target bus uses 0x7E0 request / 0x7E8 response. No session/authentication claims are implied.
+Policies match transmitter, segment and optional CAN ID. They can drop frames or add simulated delivery latency. The dashboard shows applied rules, dropped frames and per-bus backlog/load. This is an SDN-style programmable simulation, not an OpenFlow implementation.
 
-## Storage and packaging
+## ECU and virtual hardware schema
 
-The application has one C++ subprocess per HTTP server. A Python lock serializes commands; multiple browsers inspect the same simulation. Clock advancement belongs to the server thread. Browser clients cannot invoke its advance command directly. Snapshots keep 200 CAN frames and 80 transitions. CSV export captures those retained frames; full logging/replay is not implemented.
+An ECU definition contains identity, inputs, initialized variables, tasks, bindings, state-machine transitions, CAN interfaces, DTC rules, assumptions and a hardware profile.
 
-Container assets are read-only, and the default runs as UID/GID 10001 with no Linux capabilities. Imported models are reviewed and validated in memory. Download a definition and add its path to a scenario to reuse it on the next start.
+Hardware fields:
+- cpu_mhz: virtual clock.
+- ram_kib / flash_kib: modeled capacities.
+- task_budget_us: maximum modeled task cost per step.
+- Each task may declare cost_us at a 120 MHz reference clock; cost scales with the virtual clock.
+- CPU load and estimated RAM/flash use are reported by the kernel.
+- ADC channels apply declared resolution and range quantization to analog inputs.
+- GPIO output variables expose fan/contactor states; the actuator bindings connect them to the plant.
+- The virtual CAN controller has an FD capability flag and bounded RX FIFO; overflow trips its modeled watchdog.
+- Container CPU/RAM limits are independently enforced by Compose.
 
-## Build migration
+Tasks follow list order. Assignments within a task read a shared prior-value snapshot. At most one state transition occurs per tick. States do not implicitly disable tasks; definitions explicitly gate outputs. Expressions are restricted numbers/booleans/signal references or op/args trees. No generated source code is compiled or executed.
 
-The original CMake glob accidentally included an interactive main inside the library, omitted a runnable application target and required a missing `googletest/` directory. Explicit targets now separate CAN, vehicle runtime, application and tests. The original incomplete SimulationManager header is replaced with the implemented runtime. Existing Sender/Receiver interfaces remain available; receive now respects availability, and rename updates the identity.
+Signal packing supports 1–32-bit signed/unsigned Intel integers at any valid bit position in an 8-byte classic or up-to-64-byte FD payload. Range, overlap and representability checks reject inconsistent definitions. Encoding saturates to declared physical ranges.
 
-The old host-provisioning shell calls are removed from CanBus. SocketCAN connects only to an existing interface and uses checked frame sizes/IDs. Tests now use two endpoints and concurrent transport peers rather than sending and receiving a multi-frame transfer on one endpoint.
+Optional freshness_inputs map a declared ECU input to an RX message's age. The ADAS kernel marks perception unavailable when radar traffic becomes stale. All values are sampled/decoded; no hidden central ADAS decision replaces the worker logic.
+
+## ADAS closed loop
+
+Synthetic world measurements → Radar ECU → CAN FD RadarObjectList → ADAS ECU → classic ADASControl → gateway → Motor/ABS ECU → physical vehicle → new measurements.
+
+FCW uses a time-to-collision threshold. AEB requests braking and inhibits torque. Basic ACC controls throttle toward a target speed while observing a distance threshold; it is not a validated adaptive-cruise algorithm. Radar observations are abstract range/closing-speed/confidence signals, not raw sensor data.
+
+The longitudinal plant includes speed, position, torque, braking/friction, wheel slip, RPM, energy/SOC and approximate temperature/fan feedback. No steering, lane-control physics, full perception or route planning is claimed.
+
+## Diagnostics between containers
+
+The main tester and selected ECU use independent event-driven ISO-TP endpoints. Every request/flow-control/response frame crosses the container HTTP boundary and is recorded on the diagnostic virtual bus. UDS executes against the target C++ kernel's own DTC memory.
+
+Supported demonstration services: 0x10, 0x14, 0x19/02, 0x22 and 0x3E. The demonstration VIN exercises classic multi-frame transport; a CAN FD link can carry that same response in an escaped single frame. Normal physical addressing uses 0x7E0 request / 0x7E8 response. Session responses acknowledge modes but do not implement authorization/security gating.
+
+DTCs latch stored status on trigger, clear active status on recovery, and remain stored until cleared. Persistent faults relatch on the next kernel tick.
+
+## Extension and persistence
+
+One reserve container can be assigned to a JSON-imported ECU without exposing the Docker daemon. Adding more concurrent ECUs requires declaring additional worker services/endpoints. The application never silently hosts extra ECU tasks in the main container.
+
+Imported definitions are in memory. Download JSON, add it to the scenario and supply its dedicated worker mapping for persistent startup. Reset releases imported reserve assignments.
+
+Retention: 200 CAN frames and 80 state transitions. CSV captures retained frames; full trace recording/replay and persistent projects remain future work.
