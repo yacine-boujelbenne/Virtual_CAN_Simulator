@@ -1,23 +1,26 @@
-#ifndef _CANBUS_HPP
-#define _CANBUS_HPP
-
+#pragma once
 #include "Can.hpp"
-
+#include <chrono>
+#include <memory>
+#include <string>
 class CanBus {
 public:
-    CanBus();
+    enum class Backend { Internal, SocketCAN };
+    explicit CanBus(Backend backend = Backend::Internal, std::string channel = "vehicle", bool loopback = false);
     ~CanBus();
-
-    bool createVCAN();
+    CanBus(const CanBus&) = delete;
+    CanBus& operator=(const CanBus&) = delete;
+    bool createVCAN(); // Compatibility: only checks; never provisions a host interface.
     bool init();
     void closeSocket();
-    void send(Can &frame);
+    void send(const Can &frame);
     Can receiveFrame();
-
+    bool receive(Can &frame, std::chrono::milliseconds timeout = std::chrono::milliseconds(100));
 private:
-#ifdef __linux__
+    struct Endpoint;
+    std::shared_ptr<Endpoint> endpoint_;
+    Backend backend_;
+    std::string channel_;
+    bool loopback_;
     int socket_fd = -1;
-#endif
 };
-
-#endif

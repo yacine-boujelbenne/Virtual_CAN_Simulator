@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "name": "Dynamics ECU",
+  "inputs": [
+    "ignition",
+    "speed_sensor",
+    "rpm_sensor"
+  ],
+  "variables": {
+    "vehicle_speed": 0,
+    "vehicle_rpm": 0
+  },
+  "tasks": [
+    {
+      "name": "measure",
+      "period_ms": 10,
+      "assign": {
+        "vehicle_speed": {
+          "op": "mul",
+          "args": [
+            "speed_sensor",
+            3.6
+          ]
+        },
+        "vehicle_rpm": "rpm_sensor"
+      }
+    }
+  ],
+  "bindings": {},
+  "messages": [
+    {
+      "name": "VehicleStatus",
+      "id": 288,
+      "dlc": 8,
+      "direction": "tx",
+      "signals": [
+        {
+          "name": "vehicle_speed",
+          "start": 0,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 288,
+          "unit": "km/h",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "vehicle_rpm",
+          "start": 16,
+          "length": 16,
+          "factor": 0.25,
+          "offset": 0,
+          "min": 0,
+          "max": 16000,
+          "unit": "rpm",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ],
+      "period_ms": 20
+    }
+  ],
+  "state_machine": {
+    "initial": "OFF",
+    "states": [
+      "OFF",
+      "RUN"
+    ],
+    "transitions": [
+      {
+        "from": "OFF",
+        "to": "RUN",
+        "when": "ignition"
+      },
+      {
+        "from": "RUN",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "dtcs": [],
+  "assumptions": [
+    "Generic educational model; not an OEM controller.",
+    "Classic CAN, little-endian signals, 10 ms simulation step."
+  ]
+}

@@ -1,0 +1,294 @@
+{
+  "schema_version": 1,
+  "name": "Motor ECU",
+  "inputs": [
+    "ignition",
+    "throttle",
+    "rpm_sensor",
+    "temperature_sensor",
+    "power_permit",
+    "battery_soc",
+    "pack_voltage",
+    "pack_current",
+    "battery_fault"
+  ],
+  "variables": {
+    "motor_rpm": 0,
+    "motor_temperature": 30,
+    "motor_torque": 0,
+    "motor_fault": 0,
+    "fan_cmd": 0
+  },
+  "tasks": [
+    {
+      "name": "measure",
+      "period_ms": 10,
+      "assign": {
+        "motor_rpm": "rpm_sensor",
+        "motor_temperature": "temperature_sensor",
+        "motor_fault": {
+          "op": "gt",
+          "args": [
+            "temperature_sensor",
+            115
+          ]
+        }
+      }
+    },
+    {
+      "name": "control",
+      "period_ms": 10,
+      "assign": {
+        "motor_torque": {
+          "op": "if",
+          "args": [
+            {
+              "op": "and",
+              "args": [
+                "ignition",
+                {
+                  "op": "eq",
+                  "args": [
+                    "motor_fault",
+                    0
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "mul",
+              "args": [
+                {
+                  "op": "mul",
+                  "args": [
+                    "throttle",
+                    320
+                  ]
+                },
+                "power_permit"
+              ]
+            },
+            0
+          ]
+        },
+        "fan_cmd": {
+          "op": "gt",
+          "args": [
+            "motor_temperature",
+            90
+          ]
+        }
+      }
+    }
+  ],
+  "bindings": {
+    "torque_request": "motor_torque",
+    "fan": "fan_cmd"
+  },
+  "messages": [
+    {
+      "name": "MotorStatus",
+      "id": 256,
+      "dlc": 8,
+      "direction": "tx",
+      "signals": [
+        {
+          "name": "motor_rpm",
+          "start": 0,
+          "length": 16,
+          "factor": 0.25,
+          "offset": 0,
+          "min": 0,
+          "max": 16000,
+          "unit": "rpm",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "motor_temperature",
+          "start": 16,
+          "length": 16,
+          "factor": 0.01,
+          "offset": -40,
+          "min": -40,
+          "max": 150,
+          "unit": "\u00b0C",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "motor_torque",
+          "start": 32,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 320,
+          "unit": "Nm",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "motor_fault",
+          "start": 48,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ],
+      "period_ms": 20
+    },
+    {
+      "name": "BatteryStatus",
+      "id": 784,
+      "dlc": 8,
+      "direction": "rx",
+      "signals": [
+        {
+          "name": "battery_soc",
+          "start": 0,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "pack_voltage",
+          "start": 16,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "V",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "pack_current",
+          "start": 32,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": -300,
+          "max": 300,
+          "unit": "A",
+          "signed": true,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "battery_fault",
+          "start": 48,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "power_permit",
+          "start": 49,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ]
+    }
+  ],
+  "state_machine": {
+    "initial": "OFF",
+    "states": [
+      "OFF",
+      "RUN",
+      "FAULT"
+    ],
+    "transitions": [
+      {
+        "from": "OFF",
+        "to": "RUN",
+        "when": "ignition"
+      },
+      {
+        "from": "RUN",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      },
+      {
+        "from": "RUN",
+        "to": "FAULT",
+        "when": "motor_fault"
+      },
+      {
+        "from": "FAULT",
+        "to": "RUN",
+        "when": {
+          "op": "eq",
+          "args": [
+            "motor_fault",
+            0
+          ]
+        }
+      },
+      {
+        "from": "FAULT",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "dtcs": [
+    {
+      "code": "P0217",
+      "uds_code": 136960,
+      "name": "Motor overtemperature",
+      "severity": "critical",
+      "trigger": {
+        "op": "gt",
+        "args": [
+          "motor_temperature",
+          115
+        ]
+      },
+      "recover": {
+        "op": "lt",
+        "args": [
+          "motor_temperature",
+          105
+        ]
+      }
+    }
+  ],
+  "assumptions": [
+    "Generic educational model; not an OEM controller.",
+    "Classic CAN, little-endian signals, 10 ms simulation step."
+  ]
+}

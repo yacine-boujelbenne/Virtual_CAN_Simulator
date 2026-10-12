@@ -1,73 +1,29 @@
-#ifndef CAN_TP_HPP
-#define CAN_TP_HPP
-
-#include <cstdint>
-#include <string>
-
+#pragma once
 #include "CanBus.hpp"
-
-class CanTp 
-{
+#include <memory>
+#include <string>
+// Classic CAN ISO-TP normal addressing, 1..4095 bytes. Separate concurrent endpoints.
+class CanTp {
 public:
-
     CanTp(uint32_t txId, uint32_t rxId, CanBus &bus);
     CanTp(uint32_t txId, uint32_t rxId);
-    ~CanTp();
-    const static uint8_t staticBS = static_cast<uint8_t>(16);
-    const static uint8_t staticST = static_cast<uint8_t>(100);
-
+    static constexpr uint8_t staticBS = 255, staticST = 127;
     void sendMessage(const std::string &message);
-    void sendMessageP(const std::string &message);
+    void sendMessageP(const std::string &message) {sendMessage(message);}
     std::string receiveMessage();
-
-    void setbusManager(CanBus &bus) { busTp_ = bus; }
-    CanBus &getbus() { return busTp_; }
-    void setRx(int rx){
-        this->rxId_ = static_cast<uint16_t>(rx);
-    }
-    void setTx(int tx){
-        this->txId_ = static_cast<uint16_t>(tx);
-    }
-    void setbs(uint8_t b){
-        this->bs=b;
-    }
-    uint8_t getbs(){
-        return this->bs;
-    }
-    void setst(uint8_t s){
-        this->st = s;
-    }
-    uint8_t getst(){
-        return this->st;
-    }
-
+    void setbusManager(CanBus &bus) {owned_.reset(); bus_ = &bus;}
+    CanBus &getbus() {return *bus_;}
+    void setRx(int id) {rxId_ = static_cast<uint32_t>(id);}
+    void setTx(int id) {txId_ = static_cast<uint32_t>(id);}
+    void setbs(uint8_t value) {bs_ = value;}
+    uint8_t getbs() const {return bs_;}
+    void setst(uint8_t value) {st_ = value;}
+    uint8_t getst() const {return st_;}
 private:
-    std::string receiveCon(int& retryCount);
-    void sendSingleFrame(const std::string &message);
-    void sendMultiFrame(bool first);
-    void sendNextBlock(uint8_t blockSize);
-    void sendFlowControl(uint8_t flowStatus, uint8_t blockSize, 
-                         uint8_t separationTime, uint32_t targetId);
-
-    uint32_t txId_;
-    uint32_t rxId_;
-    CanBus& busTp_;
-    bool ownsBus_;
-
-    // Sending state variables
-    bool sendingMultiFrame = false;
-    std::string sendingMessage;
-    size_t sendingOffset = 0;
-    uint8_t sendingSequence = 1;
-
-    // Receiving state variables
-    bool receivingMultiFrame = false;
-    size_t receivingTotalLength = 0;
-    size_t receivingOffset = 0;
-    uint8_t receivingSequence = 1;
-    std::vector<uint8_t> receivingBuffer;
-    uint8_t bs= 8;
-    uint8_t st = 10;
+    Can waitFrame();
+    void transmit(const std::vector<uint8_t> &bytes);
+    uint32_t txId_, rxId_;
+    std::unique_ptr<CanBus> owned_;
+    CanBus *bus_;
+    uint8_t bs_ = 8, st_ = 0;
 };
-
-#endif // CAN_TP_HPP

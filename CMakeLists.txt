@@ -1,32 +1,24 @@
-cmake_minimum_required(VERSION 3.14)
-project(CanTpProject LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
+cmake_minimum_required(VERSION 3.16)
+project(VirtualVehicleLab VERSION 1.0 LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Include headers
-include_directories(headers)
-
-# Collect source files
-file(GLOB SRC_FILES src/*.cpp)
-
-# Build main library
-add_library(cantp_lib ${SRC_FILES})
-
-# -------- GoogleTest ----------
-add_subdirectory(googletest)   # assumes you cloned gtest here
-enable_testing()
-
-# -------- Tests ---------------
-file(GLOB TEST_SRC tests/*.cpp)
-
-add_executable(run_tests ${TEST_SRC})
-
-target_link_libraries(run_tests
-    cantp_lib
-    gtest
-    gtest_main
-    pthread
-)
-
-add_test(NAME CanTpTests COMMAND run_tests)
+set(CMAKE_CXX_EXTENSIONS OFF)
+find_package(Threads REQUIRED)
+add_library(cantp_lib src/Can.cpp src/CanBus.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp)
+target_include_directories(cantp_lib PUBLIC headers)
+target_link_libraries(cantp_lib PUBLIC Threads::Threads)
+target_compile_options(cantp_lib PRIVATE -Wall -Wextra -Wpedantic)
+add_library(vehicle_runtime src/SimulationManager.cpp)
+target_link_libraries(vehicle_runtime PUBLIC cantp_lib)
+target_compile_options(vehicle_runtime PRIVATE -Wall -Wextra -Wpedantic)
+add_executable(vehicle_sim app/main.cpp)
+target_link_libraries(vehicle_sim PRIVATE vehicle_runtime)
+include(CTest)
+if(BUILD_TESTING)
+    find_package(GTest REQUIRED)
+    add_executable(run_tests tests/test_can.cpp tests/test_canBus.cpp tests/test_canTp.cpp tests/test_sender.cpp tests/test_receiver.cpp tests/test_runtime.cpp)
+    target_link_libraries(run_tests PRIVATE vehicle_runtime GTest::gtest_main)
+    add_test(NAME VehicleLabTests COMMAND run_tests)
+    set_tests_properties(VehicleLabTests PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}" TIMEOUT 30)
+endif()
+install(TARGETS vehicle_sim RUNTIME DESTINATION bin)

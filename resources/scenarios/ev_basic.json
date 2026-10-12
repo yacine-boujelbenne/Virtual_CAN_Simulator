@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "name": "EV \u00b7 Five ECU Demonstrator",
+  "step_ms": 10,
+  "bitrate": 500000,
+  "initial_state": {
+    "soc": 85
+  },
+  "sensors": [
+    {
+      "name": "speed_sensor",
+      "source": "speed",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "rpm_sensor",
+      "source": "rpm",
+      "min": 0,
+      "max": 16000,
+      "unit": "rpm",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "temperature_sensor",
+      "source": "motor_temperature",
+      "min": -40,
+      "max": 150,
+      "unit": "\u00b0C",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "battery_temperature_sensor",
+      "source": "battery_temperature",
+      "min": -40,
+      "max": 100,
+      "unit": "\u00b0C",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "soc_sensor",
+      "source": "soc",
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "voltage_sensor",
+      "source": "voltage",
+      "min": 0,
+      "max": 600,
+      "unit": "V",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "current_sensor",
+      "source": "current",
+      "min": -300,
+      "max": 300,
+      "unit": "A",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "wheel_fl_sensor",
+      "source": "wheel_fl",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "wheel_fr_sensor",
+      "source": "wheel_fr",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "wheel_rl_sensor",
+      "source": "wheel_rl",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "wheel_rr_sensor",
+      "source": "wheel_rr",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    }
+  ],
+  "ecus": [
+    "../ecu_templates/motor.json",
+    "../ecu_templates/abs.json",
+    "../ecu_templates/bms.json",
+    "../ecu_templates/dynamics.json",
+    "../ecu_templates/cluster.json"
+  ]
+}

@@ -1,0 +1,26 @@
+VERSION "Virtual Vehicle Lab 1"
+NS_ :
+BS_:
+BU_: Motor BMS ABS Dynamics Cluster
+
+BO_ 288 VehicleStatus: 8 Vehicle
+ SG_ vehicle_speed : 0|16@1+ (0.01,0) [0|288] "km/h" Cluster
+ SG_ vehicle_rpm : 16|16@1+ (0.25,0) [0|16000] "rpm" Cluster
+
+BO_ 256 MotorStatus: 8 Vehicle
+ SG_ motor_rpm : 0|16@1+ (0.25,0) [0|16000] "rpm" Cluster
+ SG_ motor_temperature : 16|16@1+ (0.01,-40) [-40|150] "°C" Cluster
+ SG_ motor_torque : 32|16@1+ (0.01,0) [0|320] "Nm" Cluster
+ SG_ motor_fault : 48|1@1+ (1,0) [0|1] "" Cluster
+
+BO_ 784 BatteryStatus: 8 Vehicle
+ SG_ battery_soc : 0|16@1+ (0.01,0) [0|100] "%" Cluster
+ SG_ pack_voltage : 16|16@1+ (0.01,0) [0|600] "V" Cluster
+ SG_ pack_current : 32|16@1- (0.01,0) [-300|300] "A" Cluster
+ SG_ battery_fault : 48|1@1+ (1,0) [0|1] "" Cluster
+ SG_ power_permit : 49|1@1+ (1,0) [0|1] "" Cluster
+
+BO_ 544 BrakeStatus: 8 Vehicle
+ SG_ abs_active : 0|1@1+ (1,0) [0|1] "" Cluster
+ SG_ pressure : 8|16@1+ (0.0001,0) [0|1] "ratio" Cluster
+ SG_ wheel_slip : 24|16@1+ (0.0001,0) [0|1] "ratio" Cluster

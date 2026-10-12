@@ -1,35 +1,37 @@
-#include <iostream>
-#include <memory>
-#include <vector>
+#pragma once
 #include "CanBus.hpp"
-#include "Ecu.hpp"
-#include <time.h>
-#include "CanManager.hpp"
-#include "BusManager.hpp"
-#include "TransportProtocol.hpp"
-#include "CanTp.hpp"
-
-#ifndef _SIMULATION_MANAGER_HPP
-#define _SIMULATION_MANAGER_HPP
-
-class SimulationManager
-{
-    long silenceTime = time(nullptr);
-    // std::vector<std::unique_ptr<CanTpSession>> nodes;
-
+#include "json.hpp"
+#include <map>
+#include <memory>
+#include <random>
+#include <string>
+using Json = nlohmann::json;
+class SimulationManager {
 public:
-    SimulationManager() = default;
-    ~SimulationManager() = default;
-    void addNode(uint32_t txId, uint32_t rxId);
-    void runSimulation(Ecu &ecu);
-    Ecu *createNewEcu(Ecu *ecu, CanManager &canManager);
-    void initializer();
-    void showResults(const Ecu &ecu);
-
-    CanManager &cm;        // Reference to CanManager for sending/receiving data
-    TransportProtocol &tp; // Reference to TransportProtocol for CAN communication
-    Ecu &ecu1;             // Reference to Ecu for simulation
-    BusManager &bus;       // Reference to BusManager for CAN bus management
+    explicit SimulationManager(const std::string &scenarioPath);
+    Json command(const Json &request);
+    Json snapshot() const;
+    void step(unsigned count = 1);
+    static void validateEcu(const Json &definition, unsigned stepMs = 10);
+private:
+    struct Ecu {
+        Json definition;
+        std::map<std::string,double> values;
+        std::string state;
+        std::unique_ptr<CanBus> bus;
+        std::map<std::string,bool> dtcActive, dtcStored;
+    };
+    std::string scenarioPath_, channel_;
+    Json scenario_, sensors_, frames_ = Json::array(), events_ = Json::array();
+    std::map<std::string,double> world_, controls_;
+    std::vector<Ecu> ecus_;
+    std::unique_ptr<CanBus> monitor_;
+    std::mt19937 random_{42};
+    unsigned stepMs_ = 10;
+    uint64_t tick_ = 0, frameCount_ = 0, frameBits_ = 0;
+    bool running_ = false;
+    void reset();
+    void tick();
+    void loadEcu(const Json &definition);
+    Json diagnostic(const Json &request);
 };
-
-#endif // _SIMULATION_MANAGER_HPP

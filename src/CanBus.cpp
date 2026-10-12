@@ -1,169 +1,112 @@
-#include <iostream>
-#include <cstdint>
-#include "../headers/CanBus.hpp"
+#include "CanBus.hpp"
+#include <algorithm>
+#include <condition_variable>
+#include <deque>
+#include <map>
+#include <mutex>
+#include <stdexcept>
 #ifdef __linux__
-#include <cstdlib>
 #include <cstring>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <poll.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <net/if.h>
-#include <sys/time.h>  // For timeval
-#include <cerrno>      // For errno
 #endif
-
-CanBus::CanBus() {
-#ifdef __linux__
-    socket_fd = -1;
-#endif
+struct CanBus::Endpoint {std::mutex mutex; std::condition_variable ready; std::deque<Can> frames;};
+namespace {
+std::mutex registryMutex;
+std::map<std::string, std::vector<std::weak_ptr<void>>> registry;
 }
-
-CanBus::~CanBus() {
-    closeSocket();
-}
-
+CanBus::CanBus(Backend backend, std::string channel, bool loopback)
+    : backend_(backend), channel_(std::move(channel)), loopback_(loopback) {}
+CanBus::~CanBus() {closeSocket();}
 bool CanBus::createVCAN() {
+    if (backend_ == Backend::Internal) return true;
 #ifdef __linux__
-    int ret = system("sudo modprobe vcan");
-    if (ret != 0) {
-        std::cerr << "Error loading vcan module\n";
-        return false;
-    }
-    ret = system("sudo ip link add dev vcan0 type vcan");
-    if (ret != 0) {
-        std::cerr << "Error creating vcan0 interface\n";
-        return false;
-    }
-    ret = system("sudo ip link set up vcan0");
-    if (ret != 0) {
-        std::cerr << "Error activating vcan0\n";
-        return false;
-    }
-    std::cout << "vcan0 created and activated\n";
-    return true;
+    return if_nametoindex(channel_.c_str()) != 0;
 #else
-    std::cerr << "VCAN only supported on Linux\n";
     return false;
 #endif
 }
-
 bool CanBus::init() {
+    if (endpoint_ || socket_fd >= 0) return true;
+    if (backend_ == Backend::Internal) {
+        endpoint_ = std::make_shared<Endpoint>();
+        std::lock_guard<std::mutex> lock(registryMutex);
+        auto &peers = registry[channel_];
+        peers.erase(std::remove_if(peers.begin(), peers.end(), [](auto &p){return p.expired();}), peers.end());
+        peers.push_back(endpoint_); return true;
+    }
 #ifdef __linux__
-    if ((socket_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
-        perror("Socket creation failed");
-        return false;
-    }
-
-    // Set receive timeout to 100ms
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 100000;  // 100ms
-    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
-        perror("setsockopt SO_RCVTIMEO failed");
-        close(socket_fd);
-        return false;
-    }
-
-    struct ifreq ifr;
-    std::strcpy(ifr.ifr_name, "vcan0");
-    if (ioctl(socket_fd, SIOCGIFINDEX, &ifr) < 0) {
-        perror("IOCTL failed");
-        close(socket_fd);
-        return false;
-    }
-
-    struct sockaddr_can addr;
-    addr.can_family = AF_CAN;
-    addr.can_ifindex = ifr.ifr_ifindex;
-
-    if (bind(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
-        perror("Bind failed");
-        close(socket_fd);
-        return false;
-    }
-    std::cout<<"   =========================================================="<<std::endl;
-    std::cout<<"   "<<std::endl;
-
-    std::cout << "  ==============    CAN socket initialized!  ===============\n";
-    std::cout<<"   "<<std::endl;
-
-    std::cout<<"   =========================================================="<<std::endl;
-
+    if (channel_.size() >= IFNAMSIZ) return false;
+    socket_fd = socket(PF_CAN, SOCK_RAW, CAN_RAW);
+    if (socket_fd < 0) return false;
+    ifreq request{}; std::strcpy(request.ifr_name, channel_.c_str());
+    sockaddr_can address{}; address.can_family = AF_CAN;
+    if (ioctl(socket_fd, SIOCGIFINDEX, &request) < 0) {closeSocket(); return false;}
+    address.can_ifindex = request.ifr_ifindex;
+    int own = loopback_ ? 1 : 0;
+    if (setsockopt(socket_fd, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &own, sizeof(own)) < 0 ||
+        bind(socket_fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) < 0) {closeSocket(); return false;}
     return true;
 #else
-    std::cerr << "CAN init only supported on Linux\n";
     return false;
 #endif
 }
-
-void CanBus::send(Can &frame) {
-#ifdef __linux__
-    if (socket_fd < 0) {
-        std::cerr << "  -> CAN socket not initialized\n";
+void CanBus::send(const Can &frame) {
+    if (frame.getData().size() > 8 || frame.getId() > (frame.isExtendedFrame() ? 0x1fffffffU : 0x7ffU))
+        throw std::invalid_argument("Invalid classic CAN ID or DLC");
+    if (backend_ == Backend::Internal) {
+        if (!endpoint_) throw std::runtime_error("CAN endpoint is not initialized");
+        std::lock_guard<std::mutex> registryLock(registryMutex);
+        for (auto &weak : registry[channel_]) {
+            auto peer = std::static_pointer_cast<Endpoint>(weak.lock());
+            if (!peer || (peer == endpoint_ && !loopback_)) continue;
+            {
+                std::lock_guard<std::mutex> lock(peer->mutex);
+                if (peer->frames.size() >= 8192) throw std::runtime_error("Internal CAN receive queue full");
+                peer->frames.push_back(frame);
+            }
+            peer->ready.notify_one();
+        }
         return;
     }
-
-    struct can_frame raw_frame;
-    raw_frame.can_id = frame.getId();
-    if (frame.isExtendedFrame()) {
-        raw_frame.can_id |= CAN_EFF_FLAG;
-    }
-    
-    const auto& data = frame.getData();
-    raw_frame.can_dlc = data.size();
-    std::copy(data.begin(), data.end(), raw_frame.data);
-    
-    if (write(socket_fd, &raw_frame, sizeof(raw_frame)) != sizeof(raw_frame)) {
-        perror("CAN write error");
-    } 
+#ifdef __linux__
+    if (socket_fd < 0) throw std::runtime_error("SocketCAN endpoint is not initialized");
+    can_frame raw{}; raw.can_id = frame.getId() | (frame.isExtendedFrame() ? CAN_EFF_FLAG : 0);
+    raw.can_dlc = static_cast<__u8>(frame.getData().size());
+    std::copy(frame.getData().begin(), frame.getData().end(), raw.data);
+    if (write(socket_fd, &raw, sizeof(raw)) != sizeof(raw)) throw std::runtime_error("SocketCAN write failed");
 #endif
 }
-
-Can CanBus::receiveFrame() {
+bool CanBus::receive(Can &frame, std::chrono::milliseconds timeout) {
+    if (backend_ == Backend::Internal) {
+        if (!endpoint_) return false;
+        std::unique_lock<std::mutex> lock(endpoint_->mutex);
+        if (!endpoint_->ready.wait_for(lock, timeout, [&]{return !endpoint_->frames.empty();})) return false;
+        frame = endpoint_->frames.front(); endpoint_->frames.pop_front(); return true;
+    }
 #ifdef __linux__
-    if (socket_fd < 0) {
-        return Can();
-    }
-
-    struct can_frame raw_frame;
-    ssize_t nbytes = read(socket_fd, &raw_frame, sizeof(raw_frame));
-    
-    if (nbytes < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // Timeout occurred, no data available
-            return Can();
-        }
-        perror("CAN read error");
-        return Can();
-    }
-    
-    if (nbytes != sizeof(raw_frame)) {
-        std::cerr << "Incomplete CAN frame\n";
-        return Can();
-    }
-    
-    uint32_t id = raw_frame.can_id;
-    bool isExtended = (id & CAN_EFF_FLAG) ? true : false;
-    id = isExtended ? (id & CAN_EFF_MASK) : (id & CAN_SFF_MASK);
-    
-    std::vector<uint8_t> data(raw_frame.data, raw_frame.data + raw_frame.can_dlc);
-    
-    Can frame(id, data);
-    frame.setFrameType(isExtended);
-    return frame;
+    if (socket_fd < 0) return false;
+    pollfd descriptor{socket_fd, POLLIN, 0};
+    if (poll(&descriptor, 1, static_cast<int>(timeout.count())) <= 0) return false;
+    can_frame raw{};
+    if (read(socket_fd, &raw, sizeof(raw)) != sizeof(raw) || raw.can_dlc > 8 ||
+        (raw.can_id & (CAN_ERR_FLAG | CAN_RTR_FLAG))) return false;
+    bool extended = (raw.can_id & CAN_EFF_FLAG) != 0;
+    frame = Can(raw.can_id & (extended ? CAN_EFF_MASK : CAN_SFF_MASK), {raw.data, raw.data + raw.can_dlc});
+    frame.setFrameType(extended); return true;
 #else
-    return Can();
+    return false;
 #endif
 }
-
+Can CanBus::receiveFrame() {Can frame; receive(frame); return frame;}
 void CanBus::closeSocket() {
+    endpoint_.reset();
 #ifdef __linux__
-    if (socket_fd >= 0) {
-        close(socket_fd);
-        socket_fd = -1;
-        std::cout << "          CAN socket closed!\n";
-    }
+    if (socket_fd >= 0) {close(socket_fd); socket_fd = -1;}
 #endif
 }

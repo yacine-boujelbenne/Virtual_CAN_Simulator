@@ -1,93 +1,127 @@
-# can simulator
+# Virtual Vehicle Network & ECU Simulation Platform
 
+The `feature` branch evolves the C++ CAN simulator into a runnable five-ECU vehicle lab. One container serves the browser workspace and runs the C++ simulation. No host CAN device, privileged container, API key, frontend build step, or GoogleTest Git checkout is needed.
 
+## Start the entire project
 
-## Getting started
+Install Docker Desktop (Windows/macOS) or Docker Engine with Compose v2 (Linux), then:
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.com/yacine-boujelbenne-group/can-simulator.git
-git branch -M main
-git push -uf origin main
+```sh
+git clone --branch feature https://github.com/yacine-boujelbenne/Virtual_CAN_Simulator.git
+cd Virtual_CAN_Simulator
+docker compose up --build -d --wait
 ```
 
-## Integrate with your tools
+Open **http://localhost:8080**. The repository is private: use your normal GitHub authentication when cloning. The web app has no login.
 
-- [ ] [Set up project integrations](https://gitlab.com/yacine-boujelbenne-group/can-simulator/-/settings/integrations)
+```sh
+docker compose logs -f
+docker compose down
+```
 
-## Collaborate with your team
+To change the host port, copy `.env.example` to `.env` and set `SIM_PORT=8090`, then reopen at that port. The default Compose mapping binds to localhost.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+## What works
 
-## Test and Deploy
+| Area | Implemented behavior |
+|---|---|
+| C++ core | Classic CAN, isolated internal broadcast endpoints, optional SocketCAN endpoints, fixed 10 ms clock |
+| ISO-TP | Single/multi-frame transfers, 1–4095 byte payloads, block sizes including 0, peer STmin, sequence wrap, bounded timeouts |
+| Generic ECU runtime | JSON definitions, named inputs and variables, periodic tasks, restricted expression trees, state transitions, actuator bindings |
+| Signals | Intel/little-endian signed/unsigned integers, scaling and offsets, representable-range and overlap checks |
+| Vehicle | Simplified longitudinal acceleration, braking, wheel slip, motor RPM, energy use, battery SOC and temperatures, fan cooling |
+| Five demo ECUs | Motor, ABS, BMS, dynamics measurement, instrument cluster |
+| Sensors | Sampling, reproducible Gaussian noise, stuck value, disconnected, bias, amplified noise |
+| Diagnostics | Active/stored DTCs; UDS 0x10, 0x14, 0x19/02, 0x22, 0x3E via real ISO-TP framing over an internal CAN channel |
+| Browser workspace | Drag ECU nodes, live graphs, driver controls, inspector, CAN analyzer/decoded signals, DTCs, diagnostic tester |
+| Interoperability | Strict DBC subset importer, editable JSON, definition download, recent 200-frame CSV export |
+| ECU builder | Offline template selection; optional external AI adapter; all definitions validated before use |
 
-Use the built-in continuous integration in GitLab.
+The UI is served locally and has **no CDN or JavaScript package dependencies**. It uses browser-native SVG and canvas; the C++ engine owns the simulation state. UI polling does not advance simulation time.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+## First experiments
 
-***
+1. Click **Run simulation**; raise throttle to 60%. Observe speed, RPM, SOC, and CAN payloads.
+2. Click **Load ABS experiment**. This accelerates the vehicle for 20 simulated seconds, switches to low-friction braking, and starts the clock. Inspect ABS pressure/state.
+3. Select the motor temperature sensor, inject **stuck at 120**, and run/step. Motor torque is inhibited, fan command activates, P0217 is stored, and the cluster receives a warning.
+4. Restore the sensor. The fault recovers below the threshold, but its stored DTC remains.
+5. Open **Diagnose**, select Motor ECU, and read DTCs. Read the demonstration VIN to exercise a multi-frame response.
+6. Open **Design & build**, describe an ABS ECU, and build an offline preview. Review JSON, validate, then add an observation-only ECU.
 
-# Editing this README
+Raw templates reuse actuator owners and CAN IDs. Adding such a template without adapting them intentionally fails. Offline previews remove actuator bindings and allocate unused TX IDs. Definitions added in the UI are in-memory: reset/restart reloads the original scenario. Download JSON and add it to the scenario's `ecus` list to persist a model.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## Architecture
 
-## Suggestions for a good README
+```mermaid
+flowchart TD
+  UI["Browser workspace"] --> API["Python HTTP bridge"]
+  API --> Runtime["C++ ECU runtime"]
+  Definitions["Validated JSON definitions"] --> Runtime
+  Plant["Vehicle model"] --> Sensors["Sampled sensors"]
+  Sensors --> Runtime
+  Runtime --> Actuators["Torque, brake, fan, contactor"]
+  Actuators --> Plant
+  Runtime <--> Bus["CAN and signal codec"]
+  Bus --> Cluster["Cluster and analyzer"]
+  API --> Diag["UDS tester"]
+  Diag --> TP["ISO-TP on internal CAN"]
+  TP --> Runtime
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for timing, units, schema, diagnostics and limitations.
 
-## Name
-Choose a self-explaining name for your project.
+## Native development (optional)
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+On Debian/Ubuntu:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```sh
+sudo apt-get install g++ cmake make libgtest-dev python3
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build -j2
+ctest --test-dir build --output-on-failure
+python3 app/server.py
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Run HTTP checks while the server is running:
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+```sh
+python3 tests/test_web.py -v
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+Optional DOM smoke test (test-only dependency):
+```sh
+npm install --prefix /tmp/vehicle-ui-check jsdom
+NODE_PATH=/tmp/vehicle-ui-check/node_modules node tests/test_ui.cjs
+```
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+The container build executes C++ tests; GitHub Actions additionally starts the image and executes HTTP integration checks. Building just the runtime without tests is supported with `-DBUILD_TESTING=OFF`.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+The console executable accepts one JSON command per line:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```sh
+printf '%s\n' '{"action":"controls","values":{"throttle":0.6}}' '{"action":"step","count":1000}' | ./build/vehicle_sim
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Core commands: `snapshot`, `run`, `pause`, `reset`, `step`, `controls`, `fault`, `validate`, `add_ecu`, `diagnostic`. The HTTP service drives `advance` internally every 100 ms. A delayed callback slows wall-clock playback; it does not change the fixed integration step.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## Optional AI adapter
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Without configuration, `/api/generate` selects a local template. It **does not call an LLM or implement semantic RAG**. It reports the actual provider.
 
-## License
-For open source projects, say how it is licensed.
+Set `AI_ENDPOINT` to your provider adapter URL and optionally `AI_API_KEY` in `.env`. The adapter receives:
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+```json
+{"prompt":"Create a controller...","templates":{"abs":{},"bms":{}},"schema_version":1}
+```
+
+It must return `{"definition": {...}}` within 45 seconds. It can use any LLM/RAG implementation behind that contract. The key is sent as a bearer token to the configured endpoint; it is never sent to the browser. Configure a reachable container-network URL; localhost inside the container refers to the container itself. Returned definitions pass the C++ validator and a separate network check when added. The simulator never compiles or executes generated source code.
+
+## Scope and next milestones
+
+This is a complete **educational V1**. It is not a validated production-vehicle model or a complete UDS/ISO standards implementation. CAN priority is ordered within each tick; serialization timing, bit stuffing, error confinement, bus-off and overload scheduling are not modeled. Diagnostics use an isolated internal bus and a selected virtual target, not per-ECU production diagnostic IDs. UDS sessions are acknowledged but do not gate other services. VIN/speed DIDs and DTC wire codes are demonstration conventions.
+
+SocketCAN is an optional library endpoint, not the default dashboard backend; creating `vcan` remains an operator task. CAN FD, Motorola/multiplexed DBC, OBD-II, gateways, hardware integration, native plugin loading, sophisticated ABS/thermal physics, persistent trace/replay and production RAG are future milestones. No proprietary OEM controller firmware is reproduced.
+
+## Third-party code
+
+`headers/json.hpp` is the original vendored nlohmann/json header with its MIT license notices retained. GoogleTest is installed as a build dependency. No code or datasets from the reference ECU repositories were copied.

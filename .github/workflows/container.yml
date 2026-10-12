@@ -1,0 +1,22 @@
+name: Build and verify vehicle simulator
+on:
+  push:
+    branches: [feature, master, main]
+  pull_request:
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build container (includes C++ tests)
+        run: docker compose build
+      - name: Start complete application
+        run: docker compose up -d --wait --wait-timeout 90
+      - name: HTTP integration checks
+        run: python3 tests/test_web.py -v
+      - name: Container logs
+        if: always()
+        run: docker compose logs
+      - name: Stop
+        if: always()
+        run: docker compose down

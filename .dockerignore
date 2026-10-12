@@ -1,0 +1,9 @@
+.git
+build
+build-*
+release
+.vscode
+__pycache__
+*.pyc
+*.zip
+.env
