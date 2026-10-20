@@ -22,7 +22,7 @@ private:
         std::unique_ptr<CanBus> bus;
         std::map<std::string,bool> dtcActive, dtcStored;
         std::unique_ptr<EcuKernel> kernel;
-        Json inbox=Json::array(), hardware=Json::object();
+        Json inbox=Json::array(), hardware=Json::object(), timing=Json::object();
     };
     std::string scenarioPath_, channel_;
     Json scenario_, sensors_, frames_ = Json::array(), events_ = Json::array();
@@ -35,8 +35,11 @@ private:
     bool running_ = false, distributed_ = false;
     uint64_t epoch_=0;
     Json prepared_=nullptr, policies_=Json::array(), scheduled_=Json::array();
+    Json envelopes_=Json::array(), actuations_=Json::array();
     std::map<std::string,double> busFreeUs_, busBusyUs_;
-    uint64_t dropped_=0;
+    uint64_t dropped_=0, frameSeq_=0;
+    void pushEnvelope(const Json &envelope);
+    void pushActuation(const Json &envelope);
     Json prepareTick();
     Json completeTick(const Json &results);
     void transmit(const std::string &source, const Json &message, const Can &frame, const std::string &bus, bool gateway = false);

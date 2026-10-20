@@ -198,8 +198,8 @@ void SimulationManager::reset() {
     check(stepMs_>=1&&stepMs_<=100,"Simulation step must be 1..100 ms");
     check(scenario_.value("bitrate",500000)>=10000 && scenario_.value("bitrate",500000)<=1000000,"Invalid CAN bitrate");
     ecus_.clear();monitor_=std::make_unique<CanBus>(CanBus::Backend::Internal,channel_);monitor_->init();
-    tick_=frameCount_=frameBits_=0;running_=false;random_.seed(42);
-    frames_=Json::array();events_=Json::array();
+    tick_=frameCount_=frameBits_=frameSeq_=0;running_=false;random_.seed(42);
+    frames_=Json::array();events_=Json::array();envelopes_=Json::array();actuations_=Json::array();scheduled_=Json::array();
     controls_={{"throttle",0},{"brake",0},{"ignition",1},{"ambient",25},{"road_friction",0.8},{"assist_enabled",0},{"target_speed",80},{"aeb_enabled",1},{"lead_speed",12}};
     world_={{"speed",0},{"acceleration",0},{"position",0},{"rpm",0},{"motor_temperature",30},{"battery_temperature",28},
         {"soc",85},{"voltage",390},{"current",0},{"wheel_fl",0},{"wheel_fr",0},{"wheel_rl",0},{"wheel_rr",0},
@@ -239,6 +239,7 @@ void SimulationManager::reset() {
 }
 Json SimulationManager::prepareTick() {
     if(!prepared_.is_null())return prepared_;
+    double nowUs=static_cast<double>(tick_*stepMs_*1000ULL);
     for(auto &sensor:sensors_) {
         unsigned period=sensor["period_ms"];if((tick_*stepMs_)%period)continue;
         double measured=world_.at(sensor["source"].get<std::string>());auto fault=sensor["fault"].get<std::string>();
@@ -251,18 +252,40 @@ Json SimulationManager::prepareTick() {
             measured=std::clamp(measured,sensor["min"].get<double>(),sensor["max"].get<double>());
         }
         sensor["measured"]=measured;
+        sensor["sampled_at_us"]=static_cast<uint64_t>(nowUs);
+        sensor["validity"]=fault=="none"?"valid":"invalid";
+        // Envelope B: acquisition is a distinct event from computation and delivery.
+        pushEnvelope({{"contract_version",2},{"kind","signal"},{"epoch",epoch_},{"tick",tick_},
+            {"sim_time_us",static_cast<uint64_t>(nowUs)},
+            {"source",{{"ecu","vehicle plant"},{"signal",sensor.at("source").get<std::string>()}}},
+            {"name",sensor.at("name").get<std::string>()},{"value",measured},{"unit",sensor.value("unit","")},
+            {"validity",sensor.at("validity")},{"quality_reason",fault=="none"?"none":"sensor_fault"},
+            {"timestamps",{{"sampled_at_us",static_cast<uint64_t>(nowUs)}}}});
     }
-    double nowUs=tick_*stepMs_*1000.0;
     auto remaining=Json::array();
     for(auto &delivery:scheduled_) {
         if(delivery.at("arrival_us").get<double>()>nowUs) {remaining.push_back(delivery);continue;}
+        double arrival=delivery.at("arrival_us").get<double>();uint64_t seq=delivery.at("seq").get<uint64_t>();
+        unsigned receivers=0;
         for(auto &ecu:ecus_) {
             if(ecu.definition.at("name")==delivery.at("source"))continue;
             bool interested=false;
             for(auto &m:ecu.definition.at("messages"))
                 if(m.at("direction")=="rx"&&m.at("id")==delivery.at("frame").at("id")&&m.value("bus","powertrain")==delivery.at("frame").value("bus","powertrain"))interested=true;
-            if(interested)ecu.inbox.push_back(delivery.at("frame"));
+            if(interested) {ecu.inbox.push_back(delivery.at("frame"));receivers++;}
         }
+        for(auto &record:frames_)if(record.value("seq",UINT64_MAX)==seq) {
+            record["delivered_at_us"]=static_cast<uint64_t>(arrival);
+            record["delivered_to"]=receivers;
+            break;
+        }
+        // Envelope B: received_at_us is the delivered frame's bus arrival, not the sampling instant.
+        pushEnvelope({{"contract_version",2},{"kind","can_frame"},{"epoch",epoch_},{"tick",tick_},
+            {"sim_time_us",static_cast<uint64_t>(arrival)},
+            {"source",{{"ecu",delivery.at("source").get<std::string>()},{"message",delivery.value("name","")},
+                {"can_id",delivery.at("frame").at("id")},{"bus",delivery.at("frame").value("bus","powertrain")}}},
+            {"name",delivery.value("name","")},{"validity","valid"},{"quality_reason","none"},
+            {"timestamps",{{"received_at_us",static_cast<uint64_t>(arrival)}}}});
     }scheduled_=remaining;
     Json nodes=Json::array();
     for(auto &ecu:ecus_) {
@@ -287,6 +310,14 @@ Json SimulationManager::completeTick(const Json &results) {
         const auto &r=results[i];auto &ecu=ecus_[i];
         check(r.at("name")==ecu.definition.at("name")&&r.at("tick")==tick_&&r.at("epoch")==epoch_,"ECU tick/epoch mismatch");
         check(r.at("values").is_object()&&r.at("tx_frames").is_array(),"Malformed ECU worker result");
+        // Timing envelope (v2) is mandatory: a worker that cannot declare completion time cannot pass the barrier.
+        check(r.contains("timing")&&r.at("timing").is_object(),"ECU tick result must carry a timing envelope");
+        const auto &timing=r.at("timing");
+        check(timing.contains("sampled_at_us")&&timing.contains("computed_at_us"),"ECU timing must declare sampled_at_us and computed_at_us");
+        uint64_t tickUs=static_cast<uint64_t>(tick_)*stepMs_*1000ULL;
+        uint64_t sampled=timing.at("sampled_at_us").get<uint64_t>(),computed=timing.at("computed_at_us").get<uint64_t>();
+        check(sampled==tickUs,"ECU sampled_at_us must equal the tick start");
+        check(computed>=tickUs&&computed<=tickUs+uint64_t(stepMs_)*1000ULL,"ECU computed_at_us outside its tick window");
         check(r.at("values").size()==ecu.values.size(),"ECU values do not match its interface");
         for(auto &v:r.at("values").items()) {check(ecu.values.count(v.key()),"Unknown ECU variable");requireFinite(v.value().get<double>());}
         for(auto &f:r.at("tx_frames")) {
@@ -301,9 +332,25 @@ Json SimulationManager::completeTick(const Json &results) {
     for(size_t i=0;i<ecus_.size();++i) {
         auto &ecu=ecus_[i];const auto &r=results[i];
         auto previous=ecu.state;ecu.state=r.at("state").get<std::string>();ecu.values=r.at("values").get<std::map<std::string,double>>();ecu.hardware=r.at("hardware");
+        ecu.timing=r.at("timing");
         ecu.dtcActive=r.at("dtc_active").get<std::map<std::string,bool>>();ecu.dtcStored=r.at("dtc_stored").get<std::map<std::string,bool>>();
         if(previous!=ecu.state)events_.push_back({{"time",tick_*stepMs_/1000.0},{"ecu",ecu.definition.at("name")},{"from",previous},{"to",ecu.state}});
-        for(auto &binding:ecu.definition.at("bindings").items())world_[binding.key()]=ecu.values.at(binding.value().get<std::string>());
+        // Plant commit is quantized to the tick boundary (addendum B): applied_at_us >= computed_at_us always.
+        uint64_t tickUs=static_cast<uint64_t>(tick_)*stepMs_*1000ULL;
+        uint64_t appliedUs=tickUs+uint64_t(stepMs_)*1000ULL;
+        for(auto &binding:ecu.definition.at("bindings").items()) {
+            double applied=ecu.values.at(binding.value().get<std::string>());
+            if(world_.count(binding.key())&&world_.at(binding.key())!=applied)
+                // Envelope B: applied_at_us is the plant commit of the actuator value, distinct from its computation.
+                pushActuation({{"contract_version",2},{"kind","event_chain"},{"stage","actuation"},
+                    {"correlation_id",std::to_string(epoch_)+":"+std::to_string(tick_)+":"+binding.key()},
+                    {"epoch",epoch_},{"tick",tick_},{"sim_time_us",appliedUs},
+                    {"source",{{"ecu",ecu.definition.at("name")}}},
+                    {"name",binding.key()},{"value",applied},{"validity","valid"},{"quality_reason","none"},
+                    {"timestamps",{{"sampled_at_us",tickUs},{"computed_at_us",ecu.timing.at("computed_at_us")},
+                        {"applied_at_us",appliedUs}}}});
+            world_[binding.key()]=applied;
+        }
         for(auto &frame:r.at("tx_frames"))for(auto &m:ecu.definition.at("messages"))
             if(m.at("direction")=="tx"&&m.at("id")==frame.at("id")&&m.value("bus","powertrain")==frame.value("bus","powertrain"))pending.push_back({&ecu,m,frameFrom(frame)});
     }
@@ -357,6 +404,11 @@ Json SimulationManager::snapshot() const {
         data["ecus"].push_back({{"name",ecu.definition.at("name")},{"state",ecu.state},{"values",ecu.values},{"dtcs",dtcs},{"definition",ecu.definition},{"hardware",ecu.hardware}});
     }
     data["epoch"]=epoch_;data["tick"]=tick_;data["execution_mode"]=distributed_?"distributed":"embedded";
+    // Measurement envelope: age is observed_at - sampled_at on the simulation clock only.
+    data["timing"]={{"contract_version",2},{"envelopes",envelopes_},{"actuations",actuations_},{"frame_seq",frameSeq_}};
+    uint64_t nowUs=static_cast<uint64_t>(tick_)*stepMs_*1000ULL;
+    for(auto &sensor:data.at("sensors"))
+        if(sensor.contains("sampled_at_us"))sensor["data_age_us"]=nowUs-sensor.at("sampled_at_us").get<uint64_t>();
     data["policies"]=policies_;data["dropped_frames"]=dropped_;data["queued_frames"]=scheduled_.size();data["buses"]=Json::array();
     for(auto &bus:scenario_.value("buses",Json::array())) {
         auto item=bus;auto id=bus.at("id").get<std::string>();auto it=busBusyUs_.find(id);
@@ -568,6 +620,11 @@ Json EcuKernel::tick(const Json &request) {
         if(m.at("direction")=="tx"&&(tick*stepMs_)%m.at("period_ms").get<unsigned>()==0)
             frames.push_back(wire(encode(m,values_),m.value("bus","powertrain")));
     auto result=snapshot();result["tick"]=tick;result["epoch"]=epoch;result["tx_frames"]=frames;result["previous_state"]=previous;
+    // Timing envelope: inputs are sampled at tick start; completion adds the modeled task cost of this tick.
+    result["timing"]={{"sampled_at_us",tick*static_cast<uint64_t>(stepMs_)*1000ULL},
+        {"computed_at_us",tick*static_cast<uint64_t>(stepMs_)*1000ULL+static_cast<uint64_t>(std::ceil(cost))},
+        {"task_cost_us",cost},{"task_budget_us",hardware_.at("task_budget_us")},
+        {"deadline_miss",false}};
     nextTick_++;cached_=result;return result;
 }
 Json EcuKernel::uds(const Json &request) {
@@ -610,6 +667,16 @@ Json EcuKernel::command(const Json &request) {
     if(action=="snapshot")return snapshot();
     throw std::invalid_argument("Unknown ECU kernel command");
 }
+// Envelope records follow resources/schemas/event-envelope.v2.json; retention matches the frame ring (200).
+// Actuations get their own ring: acquisition/delivery events would otherwise evict the rare but decisive ones.
+void SimulationManager::pushEnvelope(const Json &envelope) {
+    envelopes_.push_back(envelope);
+    while(envelopes_.size()>200)envelopes_.erase(envelopes_.begin());
+}
+void SimulationManager::pushActuation(const Json &envelope) {
+    actuations_.push_back(envelope);
+    while(actuations_.size()>200)actuations_.erase(actuations_.begin());
+}
 void SimulationManager::transmit(const std::string &source,const Json &message,const Can &frame,const std::string &bus,bool gateway) {
     double latency=0;bool drop=false;
     for(auto &rule:policies_) {
@@ -624,18 +691,30 @@ void SimulationManager::transmit(const std::string &source,const Json &message,c
         nominal=b.value("bitrate",500000.0);data=b.value("data_bitrate",nominal);capable=b.value("fd",false);
     }
     if(frame.isFd()&&!capable)drop=true;
+    // Envelope B rule: a frame may not reach the wire before its producer finished computing it.
+    Json producerTiming=nullptr;
+    for(auto &ecu:ecus_)if(ecu.definition.at("name")==source&&ecu.timing.contains("computed_at_us"))producerTiming=ecu.timing.at("computed_at_us");
     // Estimated serialization with a conservative 20% stuffing allowance; not bit-exact CRC modeling.
     double arbitrationBits=frame.isExtendedFrame()?67:47;
     double payloadBits=frame.getData().size()*8+(frame.isFd()?(frame.getData().size()>16?21:17):0);
     double durationUs=1e6*1.2*(arbitrationBits/nominal+payloadBits/((frame.isFd()&&frame.bitrateSwitch())?data:nominal));
-    double startUs=std::max(tick_*stepMs_*1000.0,busFreeUs_[bus]),finishUs=startUs+durationUs;
+    double startUs=std::max(std::max(tick_*stepMs_*1000.0,busFreeUs_[bus]),
+        producerTiming.is_number()?producerTiming.get<double>():0.0),finishUs=startUs+durationUs;
     if(!drop) {busFreeUs_[bus]=finishUs;busBusyUs_[bus]+=durationUs;}
     else dropped_++;
     frameCount_++;frameBits_+=static_cast<uint64_t>(arbitrationBits+payloadBits);
+    uint64_t seq=frameSeq_++;
     std::map<std::string,double> decoded;if(!message.at("signals").empty())decode(message,frame,decoded);
-    frames_.push_back({{"time",startUs/1e6},{"id",frame.getId()},{"ecu",source},{"name",message.at("name")},
+    frames_.push_back({{"time",startUs/1e6},{"seq",seq},{"id",frame.getId()},{"ecu",source},{"name",message.at("name")},
         {"dlc",frame.getData().size()},{"wire_dlc",frame.getData().size()<=8?frame.getData().size():frame.getData().size()==12?9:frame.getData().size()==16?10:frame.getData().size()==20?11:frame.getData().size()==24?12:frame.getData().size()==32?13:frame.getData().size()==48?14:15},
         {"bytes",hexBytes(frame.getData())},{"signals",decoded},{"bus",bus},{"fd",frame.isFd()},{"brs",frame.bitrateSwitch()},
-        {"extended",frame.isExtendedFrame()},{"duration_us",durationUs},{"gateway",gateway},{"dropped",drop}});
-    if(!drop&&bus!="diagnostics")scheduled_.push_back({{"source",source},{"arrival_us",finishUs+latency},{"frame",wire(frame,bus)}});
+        {"extended",frame.isExtendedFrame()},{"duration_us",durationUs},{"gateway",gateway},{"dropped",drop},
+        {"computed_at_us",producerTiming},{"delivered_at_us",nullptr}});
+    if(drop)pushEnvelope({{"contract_version",2},{"kind","can_frame"},{"epoch",epoch_},{"tick",tick_},
+        {"sim_time_us",static_cast<uint64_t>(startUs)},
+        {"source",{{"ecu",source},{"message",message.at("name")},{"can_id",frame.getId()},{"bus",bus}}},
+        {"name",message.at("name")},{"validity","invalid"},{"quality_reason","dropped_frame"},
+        {"timestamps",{{"computed_at_us",producerTiming}}}});
+    if(!drop&&bus!="diagnostics")scheduled_.push_back({{"source",source},{"arrival_us",finishUs+latency},{"frame",wire(frame,bus)},
+        {"seq",seq},{"name",message.at("name")}});
 }
