@@ -43,6 +43,7 @@ function render() {
   $('cluster-status').textContent=state.cluster?.last_error?'Clock paused · worker fault':required?'All required workers connected':'Local kernel runtime';
   $('container-summary').textContent=required?'1 controller + '+required+' ECUs + '+(state.cluster.reserve_slots||0)+' reserve':'Use Docker Compose for separate ECU containers';
   $('scenario-name').textContent=state.name;
+  if(state.project_hash)$('project-hash').textContent=state.project_hash;
   $('clock').textContent=number(state.time,2)+' s';
   $('play').textContent=state.running?'Ⅱ Pause simulation':'▶ Run simulation';
   $('speed').textContent=number(cluster.display_speed);
@@ -224,6 +225,21 @@ $('import-file').onchange=guarded(async()=>{
 $('download-definition').onclick=guarded(async()=>{
   const definition=JSON.parse($('definition').value),blob=new Blob([JSON.stringify(definition,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=definition.name.replace(/[^a-z0-9_-]/gi,'_')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+$('export-project').onclick=guarded(async()=>{
+  const project=await api('/api/project');
+  const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(project.name||'project').replace(/[^a-z0-9_-]/gi,'_')+'.vcanproj';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  $('project-badge').textContent='EXPORTED';$('project-hash').textContent=project.project_hash;
+  toast('Project exported · '+project.project_hash.slice(7,19)+'…');
+});
+$('import-project').onchange=guarded(async()=>{
+  const file=$('import-project').files[0];if(!file)return;
+  const project=JSON.parse(await file.text());
+  const result=await api('/api/project',{project});
+  $('project-badge').textContent='IMPORTED';$('project-hash').textContent=result.project_hash;
+  toast('Project imported · '+result.project_hash.slice(7,19)+'…');
+  await poll();
 });
 $('assist-enabled').onchange=guarded(()=>command('controls',{values:{assist_enabled:$('assist-enabled').checked?1:0}}));
 $('aeb-enabled').onchange=guarded(()=>command('controls',{values:{aeb_enabled:$('aeb-enabled').checked?1:0}}));

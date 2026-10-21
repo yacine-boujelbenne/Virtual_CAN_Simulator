@@ -1,4 +1,4 @@
-# CHECKPOINT — Session du 21/10/2026 (P0.4 terminé)
+# CHECKPOINT — Session du 21/10/2026 (P0.5 terminé)
 
 Reprise : relire ce fichier + `git log -1`. Le plan approuvé est P0 → P0.6 + gates (P1/P2 ensuite).
 
@@ -6,18 +6,18 @@ Reprise : relire ce fichier + `git log -1`. Le plan approuvé est P0 → P0.6 + 
 
 | Slice | État | Preuve |
 |---|---|---|
-| P0.0 Environnement | ⚠ partiel | Build g++ manuel vert, tests Python verts, 39 tests C++ verts (shim gtest local). **Bloqué : docker (permission denied) + cmake/libgtest absents** — voir « Actions utilisateur » |
+| P0.0 Environnement | ⚠ partiel | Build g++ manuel vert, tests Python verts, 42 tests C++ verts (shim gtest local). **Bloqué : docker (permission denied) + cmake/libgtest absents** — voir « Actions utilisateur » |
 | P0.1 `event-envelope.v2.json` | ✅ terminé | Draft 2020-12, 3 checks jsonschema |
 | P0.2 Enveloppe timestamps + latence E2E | ✅ terminé + pérennisé | `python3 tests/test_envelopes.py` → 4/4 OK ; régression `test_web` 8/8 + `test_distributed` 5/5 (mode `run_local.py`) |
 | P0.3 ADAS multi-objets + fusion | ✅ terminé | `python3 tests/test_adas_fusion.py` → 5/5 OK ; layout TX/RX identique, 4 slots ; CI vérifie désormais les tests natifs |
 | P0.4 ISO-TP 100 % C++ | ✅ terminé | `python3 tests/test_isotp_vectors.py` → 13 vecteurs OK (C++ ↔ oracle Python) ; `tests/test_isotp.cpp` → 12 cas dans `ctest` ; CI link corrigé |
-| P0.5 `.vcanproj` + runs A/B | ⬜ à faire | |
+| P0.5 `.vcanproj` + runs A/B | ✅ terminé | `python3 tests/test_project_ab.py` → 8/8 OK (natif + HTTP) ; hash SHA-256 canonique dans le noyau C++ |
 | P0.6 Onglet Performance dashboard | ⬜ à faire | |
-| Gates G1 (vecteurs protocoles) / G2 (A/B reproductible) | G1 ✅ / G2 ⬜ | G1 couvert par `tests/vectors/isotp` + test natif |
+| Gates G1 (vecteurs protocoles) / G2 (A/B reproductible) | G1 ✅ / G2 ✅ | G1 : `tests/vectors/isotp` + test natif ; G2 : `tests/test_project_ab.py` |
 
 Tests verts au moment du checkpoint :
-- natifs : `tests/test_envelopes.py` (4), `tests/test_protocols.py` (6), `tests/test_adas_fusion.py` (5), `tests/test_isotp_vectors.py` (13 vecteurs), C++ (39 via shim gtest) ;
-- cluster local : `tests/test_web.py` (8) + `tests/test_distributed.py` (5) via `python3 app/run_local.py`.
+- natifs : `tests/test_envelopes.py` (4), `tests/test_protocols.py` (6), `tests/test_adas_fusion.py` (5), `tests/test_isotp_vectors.py` (13 vecteurs), `tests/test_project_ab.py` (8), C++ (42 via shim gtest) ;
+- cluster local : `tests/test_web.py` (8) + `tests/test_distributed.py` (5) + `tests/test_project_ab.py` (HTTP) via `python3 app/run_local.py`.
 `tests/test_container_failure.py` n'est valide qu'en CI après `docker compose stop ecu-motor` (échec standalone = attendu).
 
 ## Décisions verrouillées (réponses utilisateur)
@@ -133,20 +133,57 @@ Correctif : `src/IsoTp.cpp` (bloc flow control) ; verrouillé par le vecteur
 **CI** : `.github/workflows/container.yml` compilait sans `src/IsoTp.cpp` → **link cassé** depuis
 l'introduction de la session ; corrigé, et `tests/test_isotp_vectors.py` ajouté à l'étape native.
 
+## P0.5 — ce qui a été fait (`.vcanproj` + runs A/B)
+**Format projet** (un seul `.vcanproj`, C4=c) : `{kind:"vcanproj", schema_version:1, name, project_hash,
+scenario, ecu_definitions, can_map, run, runtime}`. `ecu_definitions` est indexé par le nom de fichier
+référencé par le scénario (clé portable : le scénario voyage avec ses définitions) ; `can_map` est
+**dérivé** des définitions (ECU, message, ID, direction, bus, DLC, FD, période, signaux) ; `run` =
+`{step_ms, bitrate, policies}`.
+
+**Hash** : SHA-256 (**implémenté en C++**, `headers/Sha256.hpp` + `src/Sha256.cpp`, vérifié contre
+`sha256sum`/`hashlib` sur 4 vecteurs) sur la forme canonique (JSON trié, sans espaces) de
+`{scenario, ecu_definitions, can_map, run}`. Les **état live** (contrôles, monde, horloge) sont hors
+hash : deux runs de la même config partagent le même hash, une config modifiée change de hash.
+
+**Noyau C++** (`src/SimulationManager.cpp`) : `reset()` devient `applyScenario(scenario, definitions)` ;
+nouveau membre `definitions_` (définitions chargées, clé = fichier). Actions : `export_project`,
+`import_project`, `hash_project` (recalcul du hash d'un bundle, pour outiller un projet édité).
+`import_project` est **strict** (hash déclaré ≠ hash recalculé ⇒ refus avec les deux valeurs) et
+**transactionnel** (scénario + définitions précédents restaurés si l'import échoue) ; les policies de
+flux du projet sont réappliquées. `snapshot` expose désormais `project_hash`.
+
+**Contrôleur / API** : `app/controller.py` forwarde `export_project` / `import_project` ; en mode
+distribué, l'import exige un **endpoint dédié par ECU importé** (vérifié avant toute modification) et
+reconfigure les workers ; les ECUs retirés du projet repassent en réserve. `app/server.py` :
+`GET /api/project` (export) et `POST /api/project` (import, 400 si projet invalide).
+
+**UI** : panneau « PROJECT FILE · .VCANPROJ » dans l'onglet ECU builder (export `.vcanproj`, import
+d'un fichier, hash affiché en direct depuis `snapshot`).
+
+**Test natif** : `tests/test_sha256.cpp` (3 cas : vecteurs connus FIPS 180-4, 1 Mo, frontières de
+bloc) — le SHA-256 C++ est donc vérifié dans `ctest`, pas seulement en Python.
+
+**Gate G2** (`tests/test_project_ab.py`, 8 cas) : export → import dans un **cœur neuf** ⇒ hash identique ;
+**signature de run identique** (trames + enveloppes) sur 60 ticks ; projet modifié re-haché ⇒ hash
+différent ; projet altéré sans re-hachage ⇒ **refusé** et état intact ; projet sans définitions ⇒ refusé ;
+idempotence côté HTTP (import/export, 400 sur projet altéré).
+
 ## Comment on lance les choses (natif, pas de docker)
-- Build : `g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/IsoTp.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/SimulationManager.cpp app/main.cpp -o build/vehicle_sim -lpthread`
+- Build : `g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/IsoTp.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/Sha256.cpp src/SimulationManager.cpp app/main.cpp -o build/vehicle_sim -lpthread`
   (et `app/ecu_main.cpp` → `build/ecu_kernel`) ; ~2–3 min, 0 warning attendu.
 - Tests C++ natifs : `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j && ctest --test-dir build`
-  (sans libgtest : shim local dans `/tmp/opencode/gtest`, 39 tests).
+  (sans libgtest : shim local dans `/tmp/opencode/gtest`, 42 tests).
 - Cluster distribué sans docker : `python3 app/run_local.py` (8 workers + controller sur 127.0.0.1:8080) ;
   arrêt propre par SIGTERM. `tests/test_web.py` et `tests/test_distributed.py` s'exécutent dessus
   (`TEST_URL=http://127.0.0.1:8080`).
 - Serveur embedded (mode sans workers) : `python3 app/server.py` — **sait que `diagnostic` y retourne un
   snapshot et non `bytes`** (comportement préexistant, `test_web` est conçu pour le distribué).
-- Les binaires doivent exister pour `tests/test_envelopes.py`, `tests/test_adas_fusion.py` et
-  `tests/test_isotp_vectors.py` (sinon skip).
+- Les binaires doivent exister pour `tests/test_envelopes.py`, `tests/test_adas_fusion.py`,
+  `tests/test_isotp_vectors.py` et `tests/test_project_ab.py` (sinon skip).
 - CI (`.github/workflows/container.yml`) : step « Native build and envelope/perception checks »
-  (build g++ + `test_envelopes.py` + `test_adas_fusion.py` + `test_isotp_vectors.py`) avant le build Docker.
+  (build g++ + `test_envelopes.py` + `test_adas_fusion.py` + `test_isotp_vectors.py` +
+  `test_project_ab.py`) avant le build Docker ; `test_project_ab.py` est aussi rejoué sur le cluster
+  (étape « HTTP application integration »).
 
 ## Actions utilisateur en attente (bloquent P0.0 et la CI locale)
 ```
@@ -158,12 +195,10 @@ Ollama est prêt (`llama3.2:1b`, `llama3.2:3b`). PDF de référence : `docs/ECU_
 (la « companion pack » qu'il cite — schemas, `.vcanproj`, CAN map — n'existe pas dans le repo, il faut la créer).
 
 ## Suites immédiates (ordre)
-1. **P0.5 `.vcanproj`** : format projet (scénario + définitions ECU + carte CAN/DBC + config de run),
-   export/import dans le noyau C++, hash canonique par run, runs A/B reproductibles (gate G2).
-2. **P0.6 onglet Performance** : latence E2E par ECU (sampled → computed → delivered → applied),
+1. **P0.6 onglet Performance** : latence E2E par ECU (sampled → computed → delivered → applied),
    charge/backlog par bus, timeline des enveloppes.
-3. Gates G1 (déjà couvert par `tests/vectors/isotp` + `tests/test_isotp.cpp`) / G2 (A/B) + CI complète.
+2. **P1/P2** : CAN XL (B1=a), DoIP/J1939, IA agent (A2=c), `.vcanproj` signé/chiffré si besoin.
 
-Décisions P0.5 à trancher : granularité du bundle (scénario seul vs. scénario + définitions + DBC),
-emplacement du hash (enveloppe v2 vs. section projet), et signature de reproductibilité A/B
-(envelopes, trames, ou les deux).
+Décisions P0.5 **prises** (documentées ci-dessus) : bundle = scénario + définitions + carte CAN
+dérivée + config de run ; hash = SHA-256 C++ sur la forme canonique, stocké dans la section projet
+(`project_hash`) **et** exposé par `snapshot` ; signature A/B = **trames + enveloppes** (les deux).

@@ -28,7 +28,7 @@ Docker Desktop (Windows/macOS) or Docker Engine with Compose v2 (Linux) is requi
 | Network control | Classic CAN/CAN FD segments, gateway routes, registry, message drop and latency policies |
 | CAN analyzer | Protocol, BRS, segment, IDs, byte length versus DLC, raw bytes, decoded signals and delivery/drop status |
 | Diagnostics | UDS requests over real ISO-TP framing to a selected ECU worker on classic CAN or CAN FD, encoded by the C++ session engine |
-| ECU builder | JSON editor, seven templates, strict DBC subset import, optional AI adapter, validation and reserve-container assignment |
+| ECU builder | JSON editor, seven templates, strict DBC subset import, optional AI adapter, validation, reserve-container assignment and the `.vcanproj` project file |
 
 The theme uses white, light green, green and charcoal. Purple is limited to a small navigation accent.
 
@@ -65,6 +65,7 @@ Containers share Docker's host OS kernel. Virtual CPU/RAM/flash, I/O and watchdo
 8. **Kernel failure:** select an ECU and halt it. The controller pauses the clock; other containers remain alive. Restore it and resume, or reset.
 9. **Diagnostics:** read the demonstration VIN on classic CAN, then CAN FD. Inspect the actual SF/FF/CF/FC records.
 10. **New ECU:** build an offline preview, review/validate it, and assign the reserve container. Reset releases that assignment.
+11. **Reproducible project:** export the laboratory as a `.vcanproj` file, edit it, import it back and compare the SHA-256 project hash.
 
 ## Native development
 
@@ -77,6 +78,7 @@ python3 tests/test_protocols.py -v
 python3 tests/test_envelopes.py -v
 python3 tests/test_adas_fusion.py -v
 python3 tests/test_isotp_vectors.py -v
+python3 tests/test_project_ab.py -v
 python3 app/run_local.py
 ```
 
@@ -87,6 +89,7 @@ While the distributed application runs:
 ```sh
 python3 tests/test_web.py -v
 python3 tests/test_distributed.py -v
+TEST_URL=http://127.0.0.1:8080 python3 tests/test_project_ab.py -v
 ```
 
 Optional UI DOM checks:
@@ -107,13 +110,23 @@ Modeled task cost scales with virtual CPU clock. Kernel snapshots report modeled
 
 Messages added through the UI are ephemeral. Download JSON and declare its path in the scenario plus its dedicated worker mapping in Compose to retain it. Extra simultaneous ECUs need extra worker services; no main-container fallback is used.
 
+## Project file (.vcanproj)
+
+A project is a single JSON file that reproduces a laboratory: scenario, ECU definitions, the derived CAN map and the run configuration. `project_hash` is the SHA-256 of the canonical form of that content, computed by the C++ core; live controls and the simulation state stay outside the hash.
+
+- `GET /api/project` exports the running project, `POST /api/project` imports one.
+- Import is strict: a declared hash that differs from the recomputed one is refused with both values, and the running laboratory is left untouched.
+- Import is transactional: the previous scenario and definitions are restored if the project cannot be applied.
+- In distributed mode every imported ECU needs a dedicated worker endpoint, checked before anything changes.
+- The dashboard exposes export/import and the live hash in the ECU builder workspace.
+
 ## Optional AI adapter
 
 Without AI_ENDPOINT, the builder selects a local template and clearly reports that no LLM was called. The external adapter receives prompt/templates/schema_version and must return `{"definition": {...}}`. Its output is validated before assignment. Set AI_ENDPOINT and optional AI_API_KEY in `.env`; reachability is from the controller container. The current adapter contract is provider independent; a production RAG stack is not included.
 
 ## Scope
 
-This is functional software-in-the-loop for learning and experimentation. It does not reproduce proprietary ECU firmware or implement a full ADS. CAN priority and estimated serialization are modeled; electrical errors, bit-exact CRC/stuffing, bus-off/recovery and real-time deadlines are not. ISO-TP supports normal and 11-bit extended addressing, 1–4095-byte PDUs and the N_As/N_Bs/N_Ar/N_Cr timeouts; the conformance vectors in `tests/vectors/isotp` replay the same scenarios against the C++ engine and a Python oracle. Diagnostic session/security gating, full automotive Ethernet/DoIP, raw perception, steering/lane models, hardware/HIL and persistent trace/replay remain future work.
+This is functional software-in-the-loop for learning and experimentation. It does not reproduce proprietary ECU firmware or implement a full ADS. CAN priority and estimated serialization are modeled; electrical errors, bit-exact CRC/stuffing, bus-off/recovery and real-time deadlines are not. ISO-TP supports normal and 11-bit extended addressing, 1–4095-byte PDUs and the N_As/N_Bs/N_Ar/N_Cr timeouts; the conformance vectors in `tests/vectors/isotp` replay the same scenarios against the C++ engine and a Python oracle. Diagnostic session/security gating, full automotive Ethernet/DoIP, raw perception, steering/lane models, hardware/HIL and persistent trace/replay remain future work. The `.vcanproj` project file reproduces a laboratory but is not a signed, versioned or encrypted artifact.
 
 [Protocol research](docs/PROTOCOL_RESEARCH.md) records primary Linux and NHTSA sources and the exact boundaries.
 

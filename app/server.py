@@ -146,6 +146,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, self.server.engine.request({"action": "snapshot"}))
             if path == "/api/templates":
                 return self.send(200, {p.stem: json.loads(p.read_text()) for p in (ROOT / "resources/ecu_templates").glob("*.json")})
+            if path == "/api/project":
+                return self.send(200, self.server.engine.request({"action": "export_project"}))
             if path == "/api/export":
                 state = self.server.engine.request({"action": "snapshot"})
                 out = io.StringIO()
@@ -182,6 +184,10 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == "/api/dbc":
                 result = {"definition": import_dbc(body["text"])}
                 self.server.engine.request({"action": "validate", **result})
+            elif self.path == "/api/project":
+                if "project" not in body:
+                    raise ValueError("Project required")
+                result = self.server.engine.request({"action": "import_project", "project": body["project"]})
             elif self.path == "/api/generate":
                 result = build_definition(body, self.server.engine)
             else:

@@ -107,10 +107,34 @@ The protocol is implemented once, in C++, as an event-driven session (`src/IsoTp
 
 `app/transport.py` is the reference oracle of the same protocol, not a second implementation in production. The conformance vectors in `tests/vectors/isotp` are replayed twice — once against the C++ engine, once against the oracle — and both must produce the identical frame sequences, messages and failures (`tests/test_isotp_vectors.py`). `tests/test_isotp.cpp` keeps the same protocol covered natively inside `ctest`.
 
+## Project file (.vcanproj)
+
+A project is the reproducible identity of a laboratory. The C++ core owns it: `export_project` builds the bundle, `import_project` applies one, `hash_project` recomputes the hash of an edited bundle. The Python layer never hashes anything, it only forwards bundles.
+
+| Section | Content |
+|---|---|
+| `scenario` | The scenario as loaded, including sensors, buses, gateway routes and initial state |
+| `ecu_definitions` | The definitions of the ECUs, keyed by the file name the scenario refers to, so the bundle is self-contained |
+| `can_map` | Derived from the definitions: ECU, message, ID, direction, bus, DLC, FD flag, period and signal layout |
+| `run` | `step_ms`, `bitrate` and the flow policies |
+| `project_hash` | `sha256:<hex>` over the canonical JSON form of scenario, definitions, CAN map and run |
+
+The canonical form is the compact, key-sorted JSON of those four sections. Live controls, the vehicle world and the simulation clock are runtime state and are deliberately excluded, so the hash identifies the configuration and not the moment.
+
+Import rules:
+
+- **Strict**: the declared hash must equal the recomputed one, otherwise the project is refused and both values are reported.
+- **Transactional**: the previous scenario and definitions are restored when the project cannot be applied, so a rejected project never damages the running laboratory.
+- **Registry-aware**: in distributed mode every imported ECU needs a dedicated worker endpoint; the check happens before any state changes, the workers are reconfigured after the import and ECUs that left the project go back to the reserve pool.
+
+The hash is SHA-256 implemented in C++ (`src/Sha256.cpp`). `tests/test_project_ab.py` is the A/B gate: export, import into a fresh core, identical hash and identical frame/envelope signature over 60 ticks.
+
 ## Extension and persistence
 
 One reserve container can be assigned to a JSON-imported ECU without exposing the Docker daemon. Adding more concurrent ECUs requires declaring additional worker services/endpoints. The application never silently hosts extra ECU tasks in the main container.
 
 Imported definitions are in memory. Download JSON, add it to the scenario and supply its dedicated worker mapping for persistent startup. Reset releases imported reserve assignments.
 
-Retention: 200 CAN frames and 80 state transitions. CSV captures retained frames; full trace recording/replay and persistent projects remain future work.
+The `.vcanproj` file is the persistence format of a laboratory: it carries the scenario, the definitions and the run configuration, and it can be re-imported on any machine with the same hash. It is not signed, versioned or encrypted.
+
+Retention: 200 CAN frames and 80 state transitions. CSV captures retained frames; full trace recording/replay and signed project versions remain future work.

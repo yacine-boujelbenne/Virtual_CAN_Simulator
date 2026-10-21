@@ -38,6 +38,7 @@ private:
     Json envelopes_=Json::array(), actuations_=Json::array();
     std::map<std::string,double> busFreeUs_, busBusyUs_;
     std::map<std::string,std::unique_ptr<IsoTp>> testers_;
+    Json definitions_=Json::object();
     uint64_t dropped_=0, frameSeq_=0;
     void pushEnvelope(const Json &envelope);
     void pushActuation(const Json &envelope);
@@ -45,8 +46,12 @@ private:
     Json completeTick(const Json &results);
     void transmit(const std::string &source, const Json &message, const Can &frame, const std::string &bus, bool gateway = false);
     void reset();
+    void applyScenario(const Json &scenario, const Json *inlineDefinitions);
     void tick();
     void loadEcu(const Json &definition);
     Json diagnostic(const Json &request);
     Json isotpTester(const Json &request);
+    Json projectContent() const;
+    Json exportProject() const;
+    Json importProject(const Json &project);
 };

@@ -1,5 +1,6 @@
 #include "SimulationManager.hpp"
 #include "CanTp.hpp"
+#include "Sha256.hpp"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -232,8 +233,11 @@ void SimulationManager::loadEcu(const Json &definition) {
     ecu.bus=std::make_unique<CanBus>(CanBus::Backend::Internal,channel_);ecu.bus->init();
     ecus_.push_back(std::move(ecu));
 }
-void SimulationManager::reset() {
-    scenario_=readJson(scenarioPath_);if(!scenario_.contains("gateway_routes"))scenario_["gateway_routes"]=Json::array();epoch_++;prepared_=nullptr;policies_=Json::array();scheduled_=Json::array();busFreeUs_.clear();busBusyUs_.clear();dropped_=0;stepMs_=scenario_.at("step_ms");
+void SimulationManager::reset() { applyScenario(readJson(scenarioPath_),nullptr); }
+// Applies a scenario and its ECU definitions. The definitions are optional: when they are
+// missing they are read from the scenario directory, which is how a project on disk starts.
+void SimulationManager::applyScenario(const Json &scenario,const Json *inlineDefinitions) {
+    scenario_=scenario;if(!scenario_.contains("gateway_routes"))scenario_["gateway_routes"]=Json::array();epoch_++;prepared_=nullptr;policies_=Json::array();scheduled_=Json::array();busFreeUs_.clear();busBusyUs_.clear();dropped_=0;stepMs_=scenario_.at("step_ms");
     check(stepMs_>=1&&stepMs_<=100,"Simulation step must be 1..100 ms");
     check(scenario_.value("bitrate",500000)>=10000 && scenario_.value("bitrate",500000)<=1000000,"Invalid CAN bitrate");
     ecus_.clear();monitor_=std::make_unique<CanBus>(CanBus::Backend::Internal,channel_);monitor_->init();
@@ -261,7 +265,13 @@ void SimulationManager::reset() {
         check(low<=high&&noise>=0,"Invalid sensor range/noise");sensor["fault"]="none";sensor["measured"]=world_.at(source);
     }
     auto directory=std::filesystem::path(scenarioPath_).parent_path();
-    for(auto &file:scenario_["ecus"]) loadEcu(readJson(directory/file.get<std::string>()));
+    definitions_=Json::object();
+    for(auto &file:scenario_["ecus"]) {
+        auto name=file.get<std::string>();
+        Json definition=inlineDefinitions&&inlineDefinitions->contains(name)?inlineDefinitions->at(name):readJson(directory/name);
+        definitions_[name]=definition;
+        loadEcu(definition);
+    }
     // Resolve cross-ECU dependencies and require matching wire layouts.
     for(auto &ecu:ecus_)for(auto &input:ecu.definition.at("inputs")) {
         auto name=input.get<std::string>();bool found=controls_.count(name)||sensorNames.count(name)||ecu.definition.value("freshness_inputs",Json::object()).contains(name);
@@ -447,6 +457,8 @@ Json SimulationManager::snapshot() const {
         data["ecus"].push_back({{"name",ecu.definition.at("name")},{"state",ecu.state},{"values",ecu.values},{"dtcs",dtcs},{"definition",ecu.definition},{"hardware",ecu.hardware}});
     }
     data["epoch"]=epoch_;data["tick"]=tick_;data["execution_mode"]=distributed_?"distributed":"embedded";
+    // The project hash identifies the loaded scenario, definitions, CAN map and run configuration.
+    data["project_hash"]="sha256:"+sha256Hex(projectContent().dump());
     // Measurement envelope: age is observed_at - sampled_at on the simulation clock only.
     data["timing"]={{"contract_version",2},{"envelopes",envelopes_},{"actuations",actuations_},{"frame_seq",frameSeq_}};
     uint64_t nowUs=static_cast<uint64_t>(tick_)*stepMs_*1000ULL;
@@ -514,6 +526,69 @@ Json SimulationManager::isotpTester(const Json &request) {
     }
     if(action=="isotp_tester_poll") {transport.poll(now);return {{"ok",true}};}
     throw std::invalid_argument("Unknown ISO-TP action");
+}
+// Hashed content of a project: scenario, ECU definitions, CAN map and run configuration.
+// The live controls and the simulation state are runtime data and stay out of the hash.
+Json projectContentOf(const Json &project) {
+    return {{"scenario",project.at("scenario")},{"ecu_definitions",project.at("ecu_definitions")},
+        {"can_map",project.value("can_map",Json::array())},{"run",project.value("run",Json::object())}};
+}
+Json SimulationManager::projectContent() const {
+    Json map=Json::array();
+    for(auto &ecu:ecus_)for(auto &message:ecu.definition.at("messages")) {
+        Json entry={{"ecu",ecu.definition.at("name")},{"message",message.at("name")},{"id",message.at("id")},
+            {"direction",message.at("direction")},{"bus",message.value("bus","powertrain")},{"dlc",message.value("dlc",8)},
+            {"fd",message.value("fd",false)},{"period_ms",message.value("period_ms",0)},{"signals",Json::array()}};
+        for(auto &signal:message.at("signals"))
+            entry["signals"].push_back({{"name",signal.at("name")},{"start",signal.at("start")},{"length",signal.at("length")},
+                {"factor",signal.value("factor",1.0)},{"offset",signal.value("offset",0.0)},{"unit",signal.value("unit","")}});
+        map.push_back(entry);
+    }
+    return {{"scenario",scenario_},{"ecu_definitions",definitions_},{"can_map",map},
+        {"run",{{"step_ms",stepMs_},{"bitrate",scenario_.value("bitrate",500000)},{"policies",policies_}}}};
+}
+Json SimulationManager::exportProject() const {
+    auto content=projectContent();
+    Json project={{"kind","vcanproj"},{"schema_version",1},{"name",scenario_.value("name","Vehicle lab")},
+        {"project_hash","sha256:"+sha256Hex(content.dump())},{"scenario",content.at("scenario")},
+        {"ecu_definitions",content.at("ecu_definitions")},{"can_map",content.at("can_map")},{"run",content.at("run")},
+        {"runtime",{{"tick",tick_},{"controls",controls_},{"world",world_}}}};
+    return project;
+}
+Json SimulationManager::importProject(const Json &project) {
+    check(project.is_object(),"Project must be an object");
+    check(project.value("kind","")=="vcanproj","Not a .vcanproj project");
+    check(project.value("schema_version",0)==1,"Unsupported project schema version");
+    check(project.contains("scenario")&&project.at("scenario").is_object(),"Project scenario missing");
+    check(project.contains("ecu_definitions")&&project.at("ecu_definitions").is_object(),"Project ECU definitions missing");
+    // The hash identifies the exact content: a modified project is refused before any state change.
+    auto content=projectContentOf(project);
+    auto hash=sha256Hex(content.dump());
+    check(project.value("project_hash","")=="sha256:"+hash,"Project hash mismatch: declared "+project.value("project_hash","none")+", computed sha256:"+hash);
+    check(project.at("scenario").contains("ecus")&&project.at("scenario").at("ecus").is_array(),"Project scenario has no ECU list");
+    for(auto &file:project.at("scenario").at("ecus")) {
+        auto name=file.get<std::string>();
+        check(project.at("ecu_definitions").contains(name),"Project misses the definition of "+name);
+    }
+    auto previousScenario=scenario_,previousDefinitions=definitions_;
+    try {
+        applyScenario(project.at("scenario"),&project.at("ecu_definitions"));
+        // The flow policies are part of the project: the laboratory restarts with them.
+        auto rules=project.value("run",Json::object()).value("policies",Json::array());
+        check(rules.is_array()&&rules.size()<=64,"Invalid network policies");
+        for(auto &rule:rules) {
+            check(rule.is_object(),"Network rule must be an object");
+            double latency=rule.value("latency_ms",0.0);requireFinite(latency);check(latency>=0&&latency<=1000,"Invalid network latency");
+        }
+        policies_=rules;
+    } catch(...) {
+        // A rejected project leaves the running laboratory exactly as it was.
+        applyScenario(previousScenario,&previousDefinitions);
+        throw;
+    }
+    Json names=Json::array();
+    for(auto &ecu:ecus_)names.push_back(ecu.definition.at("name"));
+    return {{"imported",true},{"project_hash",exportProject().at("project_hash")},{"ecus",names}};
 }
 Json SimulationManager::command(const Json &r) {
     auto action=r.value("action","snapshot");
@@ -587,6 +662,12 @@ Json SimulationManager::command(const Json &r) {
     } else if(action=="diagnostic")return diagnostic(r);
     else if(action=="isotp_tester_start"||action=="isotp_tester_send"||action=="isotp_tester_receive"||
             action=="isotp_tester_poll"||action=="isotp_tester_end")return isotpTester(r);
+    else if(action=="export_project")return exportProject();
+    else if(action=="import_project")return importProject(r.at("project"));
+    else if(action=="hash_project") {
+        check(r.contains("project")&&r.at("project").is_object(),"Project required");
+        return {{"project_hash","sha256:"+sha256Hex(projectContentOf(r.at("project")).dump())}};
+    }
     else throw std::invalid_argument("Unknown action: "+action);
     return snapshot();
 }

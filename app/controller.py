@@ -121,6 +121,8 @@ class Engine:
         with self.lock:
             action=command.get("action","snapshot")
             if action=="snapshot":return self._snapshot()
+            if action=="export_project":return self.core.request({"action":"export_project"})
+            if action=="import_project":return self._import_project(command)
             if action=="cluster_ready":
                 if self.distributed and not self.configured:self._configure()
                 return self._snapshot()
@@ -154,6 +156,24 @@ class Engine:
                 self.nodes[definition["name"]]={"status":"connected","service":endpoint.split("//")[-1].split(":")[0],"last_error":None}
                 return self._snapshot()
             self.core.request(command);return self._snapshot() if action not in ("validate",) else {"valid":True}
+    def _import_project(self,command):
+        project=command.get("project")
+        if not isinstance(project,dict):raise ValueError("Project must be a JSON object")
+        definitions=project.get("ecu_definitions")
+        if not isinstance(definitions,dict):raise ValueError("Project ECU definitions missing")
+        names=[definition.get("name") for definition in definitions.values() if isinstance(definition,dict)]
+        # The registry is checked before the import so a missing endpoint never breaks the laboratory.
+        if self.distributed:
+            for name in names:
+                if name not in self.registry:raise ValueError("No dedicated ECU endpoint for "+str(name))
+        result=self.core.request({"action":"import_project","project":project})
+        self.failure=None
+        if self.distributed:
+            keep=set(names)
+            for name in list(self.registry):
+                if name not in keep:self.spares.append(self.registry.pop(name));self.nodes.pop(name,None)
+            self.configured=False;self._configure()
+        return result
     def _probe(self):
         if not self.distributed or not self.configured or time.monotonic()-self.last_probe<1:return
         self.last_probe=time.monotonic()
