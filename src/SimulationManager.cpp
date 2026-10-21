@@ -90,8 +90,8 @@ std::string hexBytes(const std::vector<uint8_t> &bytes) {
     std::ostringstream out; out<<std::hex;
     for(auto b:bytes) {if(out.tellp()>0)out<<' ';out.width(2);out.fill('0');out<<unsigned(b);}return out.str();
 }
-const std::set<std::string> sensorSources={"speed","rpm","motor_temperature","battery_temperature","soc","voltage","current","wheel_fl","wheel_fr","wheel_rl","wheel_rr","lead_distance","closing_speed"};
-const std::set<std::string> allowedInputs={"throttle","brake","ignition","ambient","road_friction","speed_sensor","rpm_sensor","temperature_sensor","battery_temperature_sensor","soc_sensor","voltage_sensor","current_sensor","wheel_fl_sensor","wheel_fr_sensor","wheel_rl_sensor","wheel_rr_sensor","radar_distance_sensor","closing_speed_sensor","assist_enabled","target_speed","aeb_enabled"};
+const std::set<std::string> sensorSources={"speed","rpm","motor_temperature","battery_temperature","soc","voltage","current","wheel_fl","wheel_fr","wheel_rl","wheel_rr","lead_distance","closing_speed","static_object_range"};
+const std::set<std::string> allowedInputs={"throttle","brake","ignition","ambient","road_friction","speed_sensor","rpm_sensor","temperature_sensor","battery_temperature_sensor","soc_sensor","voltage_sensor","current_sensor","wheel_fl_sensor","wheel_fr_sensor","wheel_rl_sensor","wheel_rr_sensor","radar_distance_sensor","closing_speed_sensor","static_object_sensor","front_perception_sensor","assist_enabled","target_speed","aeb_enabled"};
 const std::set<std::string> allowedActuators={"torque_request","brake_pressure","fan","power_allowed"};
 }
 void SimulationManager::validateEcu(const Json &d,unsigned stepMs) {
@@ -203,7 +203,8 @@ void SimulationManager::reset() {
     controls_={{"throttle",0},{"brake",0},{"ignition",1},{"ambient",25},{"road_friction",0.8},{"assist_enabled",0},{"target_speed",80},{"aeb_enabled",1},{"lead_speed",12}};
     world_={{"speed",0},{"acceleration",0},{"position",0},{"rpm",0},{"motor_temperature",30},{"battery_temperature",28},
         {"soc",85},{"voltage",390},{"current",0},{"wheel_fl",0},{"wheel_fr",0},{"wheel_rl",0},{"wheel_rr",0},
-        {"torque_request",0},{"brake_pressure",0},{"fan",0},{"power_allowed",1},{"lead_distance",120},{"closing_speed",0},{"lead_position",120},{"collision",0}};
+        {"torque_request",0},{"brake_pressure",0},{"fan",0},{"power_allowed",1},{"lead_distance",120},{"closing_speed",0},{"lead_position",120},{"collision",0},
+        {"static_object_s",150},{"static_object_range",150}};
     auto initialState=scenario_.value("initial_state",Json::object());
     for(auto &v:initialState.items()) {
         check(world_.count(v.key()),"Unknown initial state: "+v.key());double n=v.value();requireFinite(n);world_[v.key()]=n;
@@ -386,6 +387,8 @@ Json SimulationManager::completeTick(const Json &results) {
     world_["lead_position"]+=controls_["lead_speed"]*dt;
     world_["lead_distance"]=std::max(0.0,world_["lead_position"]-world_["position"]);
     world_["closing_speed"]=std::max(0.0,world_["speed"]-controls_["lead_speed"]);
+    // Second object on the road: a static obstacle at a fixed track position, sensed independently from the lead vehicle.
+    world_["static_object_range"]=std::max(0.0,world_["static_object_s"]-world_["position"]);
     world_["collision"]=world_["lead_distance"]<=0?1:0;
     tick_++;prepared_=nullptr;
     return {{"committed",true},{"tick",tick_},{"epoch",epoch_}};

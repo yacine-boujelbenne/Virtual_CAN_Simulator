@@ -1,4 +1,4 @@
-# CHECKPOINT — Session du 20/10/2026 (fin de journée)
+# CHECKPOINT — Session du 21/10/2026 (P0.3 terminé)
 
 Reprise : relire ce fichier + `git log -1`. Le plan approuvé est P0 → P0.6 + gates (P1/P2 ensuite).
 
@@ -6,19 +6,19 @@ Reprise : relire ce fichier + `git log -1`. Le plan approuvé est P0 → P0.6 + 
 
 | Slice | État | Preuve |
 |---|---|---|
-| P0.0 Environnement | ⚠ partiel | Build g++ manuel vert, tests Python verts. **Bloqué : docker (permission denied) + cmake/libgtest absents** — voir « Actions utilisateur » |
+| P0.0 Environnement | ⚠ partiel | Build g++ manuel vert, tests Python verts, 27 tests C++ verts (shim gtest local). **Bloqué : docker (permission denied) + cmake/libgtest absents** — voir « Actions utilisateur » |
 | P0.1 `event-envelope.v2.json` | ✅ terminé | Draft 2020-12, 3 checks jsonschema |
 | P0.2 Enveloppe timestamps + latence E2E | ✅ terminé + pérennisé | `python3 tests/test_envelopes.py` → 4/4 OK ; régression `test_web` 8/8 + `test_distributed` 5/5 (mode `run_local.py`) |
-| P0.3 ADAS multi-objets + fusion | 🔄 analyse terminée, **aucun fichier édité** | Design figé ci-dessous |
+| P0.3 ADAS multi-objets + fusion | ✅ terminé | `python3 tests/test_adas_fusion.py` → 5/5 OK ; layout TX/RX identique, 4 slots ; CI vérifie désormais les tests natifs |
 | P0.4 ISO-TP 100 % C++ | ⬜ à faire | |
 | P0.5 `.vcanproj` + runs A/B | ⬜ à faire | |
 | P0.6 Onglet Performance dashboard | ⬜ à faire | |
 | Gates G1 (vecteurs protocoles) / G2 (A/B reproductible) | ⬜ à faire | |
 
 Tests verts au moment du checkpoint :
-`tests/test_envelopes.py` (4), `tests/test_protocols.py` (6), `tests/test_web.py` (8, via `run_local.py`),
-`tests/test_distributed.py` (5). `tests/test_container_failure.py` n'est valide qu'en CI après
-`docker compose stop ecu-motor` (échec standalone = attendu).
+- natifs : `tests/test_envelopes.py` (4), `tests/test_protocols.py` (6), `tests/test_adas_fusion.py` (5), C++ (27 via shim gtest) ;
+- cluster local : `tests/test_web.py` (8) + `tests/test_distributed.py` (5) via `python3 app/run_local.py`.
+`tests/test_container_failure.py` n'est valide qu'en CI après `docker compose stop ecu-motor` (échec standalone = attendu).
 
 ## Décisions verrouillées (réponses utilisateur)
 B1=a (CAN XL), B2=d (J1939/DoIP → P1/P2), B3=a (multi-objets + fusion + E2E) ; A1=c, A2=c (IA = agent
@@ -32,7 +32,7 @@ frame ne peut toucher le bus avant `computed_at_us` de son producteur ; tick rej
 hors fenêtre.
 
 ## P0.2 — ce qui a été fait (résumé technique)
-- `resources/schemas/event-envelope.v2.json` : contrat v2 (`$defs/timestamps`, `quality_reason`, contraintes de monoticité).
+- `resources/schemas/event-envelope.v2.json` : contrat v2 (`$defs/timestamps`, `quality_reason`, contraintes de monotonicité).
 - `headers/SimulationManager.hpp` : champs `Ecu.timing`, anneaux `envelopes_` **et** `actuations_` (séparés,
   sinon noyé par ~17 acquisitions/tick), `frameSeq_`, `pushEnvelope/pushActuation`.
 - `src/SimulationManager.cpp` :
@@ -44,53 +44,62 @@ hors fenêtre.
     enveloppe `dropped_frame`, `scheduled_` enrichi.
   - `snapshot` : `timing = {contract_version, envelopes, actuations, frame_seq}` ; `data_age_us` par capteur.
   - `EcuKernel::tick` : `result.timing = {sampled_at_us, computed_at_us = sampled + ceil(cost), task_cost_us, ...}`.
-- Test permanent `tests/test_envelopes.py` (4 cas : contrat barrière, validité+monoticité, computed≤delivered,
+- Test permanent `tests/test_envelopes.py` (4 cas : contrat barrière, validité+monotonicité, computed≤delivered,
   robustesse actuation/drop face au flood d'acquisitions).
 
-## P0.3 — design prêt à implémenter (aucune édition faite)
-**Layout RadarObjectList 0x400 (FD 32 B), 19 signaux, slots de 56 bits :**
+## P0.3 — ce qui a été fait (multi-objets + fusion)
+**Layout RadarObjectList 0x400 (FD 32 B), 19 signaux, slots de 56 bits (dernier bit 232/256) :**
 - En-tête : `object_count` @0|8, `sample_counter` @8|8, `radar_valid` @16|1 ; pad 17–23.
 - Slot i (i=0..3), base = `24 + i*56` : `obj{i}_range` base|16 (f=0.01, max 600), `obj{i}_closing_speed`
   base+16|16 (f=0.01, max 80), `obj{i}_confidence` base+32|8 (max 100), `obj{i}_valid` base+40|1.
-  Fin = 233 ≤ 256 ✓. TX radar et RX ADAS doivent être strictement identiques (validateur `tx==rx`).
+- TX radar et RX ADAS déclarent **le même tableau de signaux** (validateur `tx==rx` du contrôleur) ;
+  le test compare le décodage côté contrôleur et côté noyau ADAS, bit à bit.
 
 **Monde (3 éditions C++ `src/SimulationManager.cpp`) :**
-1. `sensorSources` (:93) += `static_object_range` ; `allowedInputs` (:94) += `static_object_sensor`, `front_perception_sensor`.
-2. Défauts `world_` (:206) += `{"static_object_s",150},{"static_object_range",150}` (avant le load des sensors, qui fait `world_.at(source)`).
-3. Plante (~:387) += `world_["static_object_range"] = max(0, static_object_s - position)`.
-Sens `front_perception_sensor` = `lead_distance` (vérité partagée, 2ᵉ chemin de mesure indépendant, period 20 ms, noise 0.05).
+1. `sensorSources` += `static_object_range` ; `allowedInputs` += `static_object_sensor`, `front_perception_sensor`.
+2. Défauts `world_` += `{"static_object_s",150},{"static_object_range",150}` (avant le load des sensors, qui fait `world_.at(source)`).
+3. Plante += `world_["static_object_range"] = max(0, static_object_s - position)` (obstacle fixe sur la piste).
 
-**`resources/scenarios/ev_basic.json`** : ajouter 2 capteurs :
-`static_object_sensor` (source `static_object_range`, 0..500, 10 ms, noise 0) et
-`front_perception_sensor` (source `lead_distance`, 0..600, 20 ms, noise 0.05).
-Note : `disconnected` est clampé au max → validité via `lt(x, max)` strict.
+**Scénario `resources/scenarios/ev_basic.json`** : 2 capteurs ajoutés — `static_object_sensor`
+(source `static_object_range`, 0..500, 10 ms, noise 0) et `front_perception_sensor` (source `lead_distance`,
+0..600, 20 ms, noise 0.05 = 2ᵉ chemin de mesure indépendant de la même scène).
+`disconnected` est clampé au max → validité via `lt(x, max)` strict.
 
-**`resources/ecu_templates/radar.json`** :
-- inputs += `static_object_sensor`, `speed_sensor` (obj1 closing = vitesse ego).
-- variables : `obj0..obj3_range/closing_speed/confidence/valid` + `object_count`, `sample_counter`, `radar_valid`, `radar_fault` (obj2/obj3 init 0, jamais assignés = slots invalides).
-- tâches : `radar_sampling` (obj0 ← capteurs lead ; obj1 ← static + speed_sensor ; radar_fault inchangé) ;
-  `radar_validity` (obj0_valid/obj1_valid = `lt(static_object_sensor,500)` ; `object_count` calculé **sans retard**
-  = `add(eq(radar_fault,0), lt(static_object_sensor,500))` ; `sample_counter` = `if(gt(...,254),0,add(...,1))`).
-- message tx → 19 signaux (layout ci-dessus).
+**`resources/ecu_templates/radar.json`** : inputs += `static_object_sensor`, `speed_sensor` (obj1 closing = vitesse ego) ;
+variables `obj0..obj3_range/closing_speed/confidence/valid` + `object_count`, `sample_counter`, `radar_valid`, `radar_fault`
+(obj2/obj3 jamais assignés = slots invalides) ; tâches `radar_sampling` (obj0 ← lead, obj1 ← statique + vitesse ego,
+`radar_fault`) puis `radar_validity` (`obj0_valid = eq(radar_fault,0)`, `obj1_valid = lt(static_object_sensor,500)`,
+`object_count = add(eq(radar_fault,0), lt(static_object_sensor,500))`, `sample_counter` incrémenté avec wrap 255→0).
 
-**`resources/ecu_templates/adas.json`** :
-- inputs : renommer `object_range→obj0_range`, `object_closing_speed→obj0_closing_speed`,
-  `object_confidence→obj0_confidence` ; += `obj0_valid`, `object_count`, `sample_counter`, `front_perception_sensor`.
-- variables += `perception_gap: 99`, `fusion_disagree: 0`, `perception_valid: 0`.
-- tâche `fusion` += `perception_gap = max(sub(obj0_range,front), sub(front,obj0_range))` (abs sans op abs) et
-  `fusion_disagree = gt(perception_gap, 5)`.
-- tâche `collision_warning` += `perception_valid = and(eq(radar_valid,1), eq(fusion_disagree,0))`
-  (les tâches s'appliquent immédiatement dans l'ordre, donc pas de retard) ; **gater `aeb_request` sur
-  `perception_valid`** (FCW inchangé = avertissement conservateur). Ne casse pas l'AEB de test_web (gap≈0).
-- rx RadarObjectList → 19 signaux identiques au tx.
+**`resources/ecu_templates/adas.json`** : inputs renommés `object_*` → `obj0_*` + `obj0_valid`, `object_count`,
+`sample_counter`, `front_perception_sensor`, `obj1..3_*` ; variables += `perception_gap`, `fusion_disagree`,
+`perception_valid`. Pipeline de tâches **consécutives** (voir « écarts » ci-dessous) :
+`fusion` (`perception_gap = max(sub(obj0_range,front), sub(front,obj0_range))`, TTC, `adas_fault`, `startup_ms`) →
+`fusion_consistency` (`fusion_disagree = gt(perception_gap,5)`) → `perception_validity`
+(`perception_valid = and(eq(radar_valid,1), eq(fusion_disagree,0))`) → `collision_warning`
+(`fcw` inchangé, `aeb_request` **gaté** sur `perception_valid`) → `cruise_control`.
 
-**`web/app.js:108`** : `v.object_range→v.obj0_range`, `v.object_closing_speed→v.obj0_closing_speed`
-(seule référence externe aux anciens noms — vérifié par grep).
+**Écarts assumés vs design figé (voir commit) :**
+1. `perception_valid` **ne peut pas** vivre dans `collision_warning` : dans une tâche, toutes les affectations
+   lisent le même instantané pré-tâche (`EcuKernel::tick`), donc `aeb_request` l'aurait lu avec une valeur
+   d'un tick de retard (=0) et l'AEB n'aurait jamais.fire. D'où la scission en tâches consécutives
+   (`fusion_consistency` puis `perception_validity`) : chaque tâche voit le résultat de la précédente
+   **dans le même tick**, donc aucun retard. Règle désormais documentée dans `docs/ARCHITECTURE.md`.
+2. `obj0_valid = eq(radar_fault,0)` (et non `lt(static_object_sensor,500)`) : sinon `object_count` (=1) serait
+   incohérent avec le slot 0 invalide lors d'un `disconnected` du capteur statique.
+3. La péremption (staleness) se déclenche en **drop** du trafic radar, pas en latence : l'âge d'entrée
+   (`freshness_inputs`) est mesuré depuis le tick de **réception**, une latence supplémentaire ne vieillit donc
+   pas l'entrée. Un bus radar muet > 100 ms ⇒ `adas_fault` ⇒ `fcw=0` et `aeb_request=0`.
+4. `tests/test_kernel.cpp` : l'assertion « signal au-dessus du bit 64 » visait l'ancien layout
+   (`data[10]==100`) ; elle pointe maintenant le slot 1 (`data[10]==152` pour `static_object_sensor=150`).
+5. `web/` : nœud radar = `obj0_range`/`obj0_closing_speed`/nombre d'objets, badge « FUSION HOLD » côté ADAS,
+   nouvelle stat « Perception fusion » (écart en m) dans la scène.
 
-**Test P0.3 à créer** (`tests/test_adas_fusion.py`, style `test_envelopes.py`) : décodage des 4 slots à l'ADAS,
-count=2 en fonctionnement, staleness (radar âgé >100 ms → `adas_fault` → fcw=0), désaccord fusion
-(fault injection `bias` sur `front_perception_sensor` → `fusion_disagree=1` → `aeb_request` supprimé),
-obj1 invalidé par `disconnected` (clamp 500 → `lt` faux → valid=0, count=1).
+**Test permanent `tests/test_adas_fusion.py` (5 cas)** : décodage identique TX/RX des 4 slots + `count=2` ;
+capteur statique `disconnected` ⇒ `obj1_valid=0`, `count=1`, slot 0 intact ; désaccord de fusion (biais 10 m)
+⇒ `fusion_disagree=1`, `perception_valid=0`, `aeb_request=0` **et** `fcw=1` (avertissement conservateur) ;
+trafic radar perdu ⇒ `radar_age_ms>100`, `adas_fault=1`, `fcw=0`, état `FAULT`, puis récupération ;
+capteur radar bloqué à 700 m ⇒ `radar_fault=1`, `radar_valid=0`, `count=1`, DTC `C1A10`, `adas_fault=1`.
 
 ## Comment on lance les choses (natif, pas de docker)
 - Build : `g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/SimulationManager.cpp app/main.cpp -o build/vehicle_sim -lpthread`
@@ -100,7 +109,9 @@ obj1 invalidé par `disconnected` (clamp 500 → `lt` faux → valid=0, count=1)
   (`TEST_URL=http://127.0.0.1:8080`).
 - Serveur embedded (mode sans workers) : `python3 app/server.py` — **sait que `diagnostic` y retourne un
   snapshot et non `bytes`** (comportement préexistant, `test_web` est conçu pour le distribué).
-- Les binaires doivent exister pour `tests/test_envelopes.py` (sinon skip).
+- Les binaires doivent exister pour `tests/test_envelopes.py` et `tests/test_adas_fusion.py` (sinon skip).
+- CI (`.github/workflows/container.yml`) : nouveau step « Native build and envelope/perception checks »
+  (build g++ + `test_envelopes.py` + `test_adas_fusion.py`) avant le build Docker.
 
 ## Actions utilisateur en attente (bloquent P0.0 et la CI locale)
 ```
@@ -112,6 +123,8 @@ Ollama est prêt (`llama3.2:1b`, `llama3.2:3b`). PDF de référence : `docs/ECU_
 (la « companion pack » qu'il cite — schemas, `.vcanproj`, CAN map — n'existe pas dans le repo, il faut la créer).
 
 ## Suites immédiates (ordre)
-1. Implémenter P0.3 tel que figé ci-dessus → rebuild → `test_adas_fusion.py` + régression complète → commit.
-2. P0.4 ISO-TP C++ (sessions event-driven, addressing étendu, timeouts N_*, `tests/vectors/` comme oracle).
-3. P0.5 `.vcanproj` (export/import + hash) ; P0.6 onglet Performance ; gates G1/G2 + CI.
+1. **P0.4 ISO-TP 100 % C++** : sessions event-driven, addressing étendu, timeouts N_*, `tests/vectors/` comme oracle
+   (le Python `app/transport.py` devient le test de référence).
+2. P0.5 `.vcanproj` (export/import + hash de scénario, runs A/B reproductibles).
+3. P0.6 onglet Performance (latence E2E par ECU, bus load, envelopes). Gates G1 (vecteurs protocoles)
+   / G2 (A/B reproductible) + CI.

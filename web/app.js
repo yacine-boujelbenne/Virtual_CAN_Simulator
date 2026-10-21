@@ -105,8 +105,8 @@ function renderNodes() {
     const display=key.includes('Motor')?number(v.motor_rpm,0)+' rpm · '+number(v.motor_temperature)+' °C':
       key.includes('ABS')?(v.abs_active?'ABS ACTIVE':'READY')+' · '+number(v.pressure*100,0)+'%':
       key.includes('BMS')?number(v.battery_soc)+'% · '+number(v.pack_voltage,0)+' V':
-      key.includes('Radar')?number(v.object_range)+' m · '+number(v.object_closing_speed)+' m/s':
-      key.includes('ADAS')?'TTC '+number(v.time_to_collision)+' s · AEB '+(v.aeb_request?'ON':'OFF'):
+      key.includes('Radar')?number(v.obj0_range)+' m · '+number(v.obj0_closing_speed)+' m/s · '+number(v.object_count)+' obj':
+      key.includes('ADAS')?'TTC '+number(v.time_to_collision)+' s · AEB '+(v.aeb_request?'ON':'OFF')+(v.perception_valid===0?' · FUSION HOLD':''):
       key.includes('Dynamics')?number(v.vehicle_speed)+' km/h':number(v.display_speed)+' km/h · '+number(v.display_soc)+'%';
     node.innerHTML='<div class="node-head"><span>'+icon+'</span><span class="node-status">'+escape(ecu.state)+'</span></div><div class="node-name">'+escape(key)+'</div><div class="node-value">'+escape(display)+'</div><div class="node-can">'+escape(protocol+' · '+(tx.map(m=>'0x'+m.id.toString(16).toUpperCase()).join(' / ')||'receive'))+'</div><div class="node-service">'+escape(ecu.container?.service||'local kernel')+' · '+number(ecu.hardware?.cpu_load_percent||0,1)+'% CPU</div>';
     const p=positions.get(key);
@@ -128,6 +128,8 @@ function renderScene(){
   const adas=state.ecus.find(e=>e.name==='ADAS ECU'),v=adas?.values||{},gap=state.world.lead_distance||0;
   $('adas-state').textContent=adas?.state||'MONITORING';$('lead-gap').textContent=number(gap)+' m';
   $('ttc').textContent=v.time_to_collision>=99?'—':number(v.time_to_collision,2)+' s';
+  $('fusion-status').textContent=v.perception_valid===0?'DISAGREE ('+number(v.perception_gap,1)+' m)':'OK ('+number(v.perception_gap,1)+' m)';
+  $('fusion-status').style.color=v.perception_valid===0?'var(--red)':'var(--green)';
   $('aeb-status').textContent=v.aeb_request?'BRAKING':'READY';$('aeb-status').style.color=v.aeb_request?'var(--red)':'var(--green)';
   $('acc-status').textContent=v.acc_active?'ACTIVE':'OFF';
   const leadX=Math.min(640,230+gap*2),offset=(state.world.position*10)%80,danger=v.aeb_request||state.world.collision;

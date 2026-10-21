@@ -7,13 +7,29 @@
     "target_speed",
     "aeb_enabled",
     "brake",
-    "object_range",
-    "object_closing_speed",
-    "object_confidence",
+    "obj0_range",
+    "obj0_closing_speed",
+    "obj0_confidence",
+    "obj0_valid",
+    "obj1_range",
+    "obj1_closing_speed",
+    "obj1_confidence",
+    "obj1_valid",
+    "obj2_range",
+    "obj2_closing_speed",
+    "obj2_confidence",
+    "obj2_valid",
+    "obj3_range",
+    "obj3_closing_speed",
+    "obj3_confidence",
+    "obj3_valid",
     "radar_valid",
+    "object_count",
+    "sample_counter",
     "vehicle_speed",
     "vehicle_rpm",
-    "radar_age_ms"
+    "radar_age_ms",
+    "front_perception_sensor"
   ],
   "variables": {
     "time_to_collision": 99,
@@ -22,7 +38,10 @@
     "acc_active": 0,
     "fcw": 0,
     "adas_fault": 0,
-    "startup_ms": 0
+    "startup_ms": 0,
+    "perception_gap": 99,
+    "fusion_disagree": 0,
+    "perception_valid": 0
   },
   "tasks": [
     {
@@ -37,11 +56,11 @@
             {
               "op": "div",
               "args": [
-                "object_range",
+                "obj0_range",
                 {
                   "op": "max",
                   "args": [
-                    "object_closing_speed",
+                    "obj0_closing_speed",
                     0.1
                   ]
                 }
@@ -90,6 +109,65 @@
               "args": [
                 "startup_ms",
                 10
+              ]
+            }
+          ]
+        },
+        "perception_gap": {
+          "op": "max",
+          "args": [
+            {
+              "op": "sub",
+              "args": [
+                "obj0_range",
+                "front_perception_sensor"
+              ]
+            },
+            {
+              "op": "sub",
+              "args": [
+                "front_perception_sensor",
+                "obj0_range"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "fusion_consistency",
+      "period_ms": 10,
+      "cost_us": 120,
+      "assign": {
+        "fusion_disagree": {
+          "op": "gt",
+          "args": [
+            "perception_gap",
+            5
+          ]
+        }
+      }
+    },
+    {
+      "name": "perception_validity",
+      "period_ms": 10,
+      "cost_us": 100,
+      "assign": {
+        "perception_valid": {
+          "op": "and",
+          "args": [
+            {
+              "op": "eq",
+              "args": [
+                "radar_valid",
+                1
+              ]
+            },
+            {
+              "op": "eq",
+              "args": [
+                "fusion_disagree",
+                0
               ]
             }
           ]
@@ -152,7 +230,13 @@
                     {
                       "op": "and",
                       "args": [
-                        "radar_valid",
+                        {
+                          "op": "and",
+                          "args": [
+                            "radar_valid",
+                            "perception_valid"
+                          ]
+                        },
                         {
                           "op": "and",
                           "args": [
@@ -176,7 +260,7 @@
                                 {
                                   "op": "lt",
                                   "args": [
-                                    "object_range",
+                                    "obj0_range",
                                     5
                                   ]
                                 }
@@ -238,7 +322,7 @@
             {
               "op": "gt",
               "args": [
-                "object_range",
+                "obj0_range",
                 {
                   "op": "add",
                   "args": [
@@ -297,8 +381,44 @@
       "bus": "adas",
       "signals": [
         {
-          "name": "object_range",
+          "name": "object_count",
           "start": 0,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 4,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "sample_counter",
+          "start": 8,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 255,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "radar_valid",
+          "start": 16,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj0_range",
+          "start": 24,
           "length": 16,
           "factor": 0.01,
           "offset": 0,
@@ -309,8 +429,8 @@
           "byte_order": "little_endian"
         },
         {
-          "name": "object_closing_speed",
-          "start": 16,
+          "name": "obj0_closing_speed",
+          "start": 40,
           "length": 16,
           "factor": 0.01,
           "offset": 0,
@@ -321,8 +441,8 @@
           "byte_order": "little_endian"
         },
         {
-          "name": "object_confidence",
-          "start": 80,
+          "name": "obj0_confidence",
+          "start": 56,
           "length": 8,
           "factor": 1,
           "offset": 0,
@@ -333,8 +453,152 @@
           "byte_order": "little_endian"
         },
         {
-          "name": "radar_valid",
+          "name": "obj0_valid",
+          "start": 64,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_range",
+          "start": 80,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_closing_speed",
           "start": 96,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_confidence",
+          "start": 112,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_valid",
+          "start": 120,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_range",
+          "start": 136,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_closing_speed",
+          "start": 152,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_confidence",
+          "start": 168,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_valid",
+          "start": 176,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_range",
+          "start": 192,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_closing_speed",
+          "start": 208,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_confidence",
+          "start": 224,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_valid",
+          "start": 232,
           "length": 1,
           "factor": 1,
           "offset": 0,
@@ -639,7 +903,8 @@
   ],
   "assumptions": [
     "Functional software-in-the-loop demonstration; not production ADAS/ADS.",
-    "Radar observations are synthetic sensor measurements, not raw camera/radar perception."
+    "Radar observations are synthetic sensor measurements, not raw camera/radar perception.",
+    "Perception fusion cross-checks the radar object against an independent range measurement; a disagreement above 5 m keeps the forward-collision warning but inhibits emergency braking."
   ],
   "hardware": {
     "cpu_mhz": 240,

@@ -60,9 +60,11 @@ Containers share Docker's host OS kernel. Virtual CPU/RAM/flash, I/O and watchdo
 3. **ABS:** click the low-friction experiment and inspect brake-pressure modulation.
 4. **Sensor failure:** inject a motor-temperature fault or disconnect the radar-distance sensor. Observe the owning ECU's DTC/state and downstream behavior.
 5. **Network failure:** drop Radar ECU traffic on the ADAS bus. The ADAS ECU detects a stale perception input.
-6. **Kernel failure:** select an ECU and halt it. The controller pauses the clock; other containers remain alive. Restore it and resume, or reset.
-7. **Diagnostics:** read the demonstration VIN on classic CAN, then CAN FD. Inspect the actual SF/FF/CF/FC records.
-8. **New ECU:** build an offline preview, review/validate it, and assign the reserve container. Reset releases that assignment.
+6. **Perception fusion:** bias the front-perception sensor by 10 m. The radar object list and the independent range measurement disagree, the forward-collision warning stays visible and emergency braking is inhibited.
+7. **Multi-object radar:** the radar object list carries four slots: the lead vehicle, a static obstacle of the plant, and two empty slots. Disconnect the static-object sensor to invalidate only the second slot.
+8. **Kernel failure:** select an ECU and halt it. The controller pauses the clock; other containers remain alive. Restore it and resume, or reset.
+9. **Diagnostics:** read the demonstration VIN on classic CAN, then CAN FD. Inspect the actual SF/FF/CF/FC records.
+10. **New ECU:** build an offline preview, review/validate it, and assign the reserve container. Reset releases that assignment.
 
 ## Native development
 
@@ -72,6 +74,8 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j2
 ctest --test-dir build --output-on-failure
 python3 tests/test_protocols.py -v
+python3 tests/test_envelopes.py -v
+python3 tests/test_adas_fusion.py -v
 python3 app/run_local.py
 ```
 

@@ -5,10 +5,11 @@
 Json kernelDefinition(const char *name) {std::ifstream f(std::string("resources/ecu_templates/")+name+".json");Json d;f>>d;return d;}
 TEST(Kernel, DuplicateTickIsIdempotentAndMissingTickRejected) {
     EcuKernel kernel(kernelDefinition("radar"));
-    Json input={{"action","tick"},{"tick",0ULL},{"epoch",1ULL},{"inputs",{{"ignition",1},{"radar_distance_sensor",20},{"closing_speed_sensor",10}}},{"frames",Json::array()}};
+    Json input={{"action","tick"},{"tick",0ULL},{"epoch",1ULL},{"inputs",{{"ignition",1},{"radar_distance_sensor",20},{"closing_speed_sensor",10},{"static_object_sensor",150}}},{"frames",Json::array()}};
     auto a=kernel.command(input),b=kernel.command(input);EXPECT_EQ(a,b);
     EXPECT_TRUE(a["tx_frames"][0]["fd"].get<bool>());EXPECT_EQ(a["tx_frames"][0]["data"].size(),32U);
-    EXPECT_EQ(a["tx_frames"][0]["data"][10],100); // Signal above bit 64 is encoded, not silently truncated.
+    EXPECT_EQ(a["tx_frames"][0]["data"][7],100); // First slot confidence sits at bit 56.
+    EXPECT_EQ(a["tx_frames"][0]["data"][10],152); // Second slot signal above bit 64 is encoded, not silently truncated.
     input["tick"]=2ULL;EXPECT_THROW(kernel.command(input),std::invalid_argument);
 }
 TEST(Kernel, VirtualCpuBudgetIsEnforcedBeforeStateAdvances) {

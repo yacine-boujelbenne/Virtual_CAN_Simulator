@@ -123,6 +123,24 @@
       "unit": "m/s",
       "period_ms": 10,
       "noise": 0
+    },
+    {
+      "name": "static_object_sensor",
+      "source": "static_object_range",
+      "min": 0,
+      "max": 500,
+      "unit": "m",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "front_perception_sensor",
+      "source": "lead_distance",
+      "min": 0,
+      "max": 600,
+      "unit": "m",
+      "period_ms": 20,
+      "noise": 0.05
     }
   ],
   "ecus": [
