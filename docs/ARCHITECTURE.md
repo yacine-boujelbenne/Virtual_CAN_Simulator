@@ -107,6 +107,22 @@ The protocol is implemented once, in C++, as an event-driven session (`src/IsoTp
 
 `app/transport.py` is the reference oracle of the same protocol, not a second implementation in production. The conformance vectors in `tests/vectors/isotp` are replayed twice — once against the C++ engine, once against the oracle — and both must produce the identical frame sequences, messages and failures (`tests/test_isotp_vectors.py`). `tests/test_isotp.cpp` keeps the same protocol covered natively inside `ctest`.
 
+## Performance window
+
+The core owns the simulation clock, so it also owns the measurements. Each snapshot carries a `performance` section built from the same envelopes the barrier validates:
+
+| Segment | Definition |
+|---|---|
+| Task cost | `computed_at_us - sampled_at_us` of the ECU kernel, per ECU |
+| Delivery latency | producer `computed_at_us` → frame delivery on the bus, attributed to the producer |
+| Actuation latency | ECU computation → plant commit, which is quantized to the tick boundary |
+| Control chain | `sampled_at_us` → `applied_at_us`, so the chain spans exactly one barrier period |
+| Throughput | frames per bus and per ECU (tx/rx), dropped frames, load estimate, backlog |
+
+Samples are kept in rolling windows (600 values, 300 timeline points per ECU) and reset with the scenario. Percentiles use the nearest-rank method. The Python layer never computes a latency: it forwards the snapshot, so the distributed and embedded paths report the same numbers.
+
+`tests/test_performance.py` checks the percentile ordering, the barrier quantization of the control chain, the drop accounting, the monotonicity of the timeline and the reset of the window.
+
 ## Project file (.vcanproj)
 
 A project is the reproducible identity of a laboratory. The C++ core owns it: `export_project` builds the bundle, `import_project` applies one, `hash_project` recomputes the hash of an edited bundle. The Python layer never hashes anything, it only forwards bundles.

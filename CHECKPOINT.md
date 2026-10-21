@@ -1,4 +1,4 @@
-# CHECKPOINT — Session du 21/10/2026 (P0.5 terminé)
+# CHECKPOINT — Session du 21/10/2026 (P0.6 terminé — roadmap P0 complète)
 
 Reprise : relire ce fichier + `git log -1`. Le plan approuvé est P0 → P0.6 + gates (P1/P2 ensuite).
 
@@ -12,11 +12,11 @@ Reprise : relire ce fichier + `git log -1`. Le plan approuvé est P0 → P0.6 + 
 | P0.3 ADAS multi-objets + fusion | ✅ terminé | `python3 tests/test_adas_fusion.py` → 5/5 OK ; layout TX/RX identique, 4 slots ; CI vérifie désormais les tests natifs |
 | P0.4 ISO-TP 100 % C++ | ✅ terminé | `python3 tests/test_isotp_vectors.py` → 13 vecteurs OK (C++ ↔ oracle Python) ; `tests/test_isotp.cpp` → 12 cas dans `ctest` ; CI link corrigé |
 | P0.5 `.vcanproj` + runs A/B | ✅ terminé | `python3 tests/test_project_ab.py` → 8/8 OK (natif + HTTP) ; hash SHA-256 canonique dans le noyau C++ |
-| P0.6 Onglet Performance dashboard | ⬜ à faire | |
+| P0.6 Onglet Performance dashboard | ✅ terminé | `python3 tests/test_performance.py` → 7/7 OK ; section `performance` du snapshot + 6ᵉ onglet UI |
 | Gates G1 (vecteurs protocoles) / G2 (A/B reproductible) | G1 ✅ / G2 ✅ | G1 : `tests/vectors/isotp` + test natif ; G2 : `tests/test_project_ab.py` |
 
 Tests verts au moment du checkpoint :
-- natifs : `tests/test_envelopes.py` (4), `tests/test_protocols.py` (6), `tests/test_adas_fusion.py` (5), `tests/test_isotp_vectors.py` (13 vecteurs), `tests/test_project_ab.py` (8), C++ (42 via shim gtest) ;
+- natifs : `tests/test_envelopes.py` (4), `tests/test_protocols.py` (6), `tests/test_adas_fusion.py` (5), `tests/test_isotp_vectors.py` (13 vecteurs), `tests/test_project_ab.py` (8), `tests/test_performance.py` (7), C++ (42 via shim gtest) ;
 - cluster local : `tests/test_web.py` (8) + `tests/test_distributed.py` (5) + `tests/test_project_ab.py` (HTTP) via `python3 app/run_local.py`.
 `tests/test_container_failure.py` n'est valide qu'en CI après `docker compose stop ecu-motor` (échec standalone = attendu).
 
@@ -168,6 +168,29 @@ bloc) — le SHA-256 C++ est donc vérifié dans `ctest`, pas seulement en Pytho
 différent ; projet altéré sans re-hachage ⇒ **refusé** et état intact ; projet sans définitions ⇒ refusé ;
 idempotence côté HTTP (import/export, 400 sur projet altéré).
 
+## P0.6 — ce qui a été fait (onglet Performance)
+**Mesures dans le noyau C++** (le noyau possède l'horloge de simulation, donc il mesure) :
+- Fenêtre glissante par ECU (600 échantillons, 300 points de timeline) : coût de tâche
+  (`computed_at_us - sampled_at_us`), latence de livraison (`computed` → livraison sur le bus, attribuée au
+  producteur), latence d'actuation (`computed` → commit plante), chaîne de contrôle (`sampled` → `applied`).
+- Compteurs : tx/rx par ECU, trames et pertes par bus, charge estimée, backlog, débit.
+- `snapshot.performance` : `{ecus:[{task,e2e,delivery,actuation,tx,rx,dropped,states,timeline}], buses:[...],
+  totals:{frames,dropped,frame_rate_hz,task_p95_us,delivery_p95_us,chain_p95_us,ticks,window_s}}`.
+- Percentiles en nearest-rank ; fenêtre **remise à zéro** au reset/changement de scénario.
+
+**UI** : 6ᵉ onglet « 06 Performance » (rail + barre d'onglets) : 4 cartes KPI (chaîne E2E, tâche p95,
+livraison p95, débit), tableau par ECU (p50/p95/max de la tâche, livraison p95, chaîne p95, tx/rx/dropped/
+états + jauge), panneau bus (charge, débit, backlog, pertes) et **timeline 30 s** (coût de tâche + latence de
+livraison) en SVG.
+
+**Effet mesurable** : avec une règle de flux `{bus:adas, latency_ms:5}`, le p95 de livraison passe de ~0.3 ms
+à ~5.3 ms pour Radar/ADAS alors que le coût de tâche reste plat — la décomposition de latence est donc
+exploitable (validé sur le cluster distribué).
+
+**Test permanent `tests/test_performance.py` (7 cas)** : présence de la fenêtre, ordre des percentiles,
+chaîne quantifiée par la barrière (10 ms = tâche + actuation), accounting des pertes, monotonie de la
+timeline, remise à zéro de la fenêtre au reset.
+
 ## Comment on lance les choses (natif, pas de docker)
 - Build : `g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/IsoTp.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/Sha256.cpp src/SimulationManager.cpp app/main.cpp -o build/vehicle_sim -lpthread`
   (et `app/ecu_main.cpp` → `build/ecu_kernel`) ; ~2–3 min, 0 warning attendu.
@@ -195,9 +218,9 @@ Ollama est prêt (`llama3.2:1b`, `llama3.2:3b`). PDF de référence : `docs/ECU_
 (la « companion pack » qu'il cite — schemas, `.vcanproj`, CAN map — n'existe pas dans le repo, il faut la créer).
 
 ## Suites immédiates (ordre)
-1. **P0.6 onglet Performance** : latence E2E par ECU (sampled → computed → delivered → applied),
-   charge/backlog par bus, timeline des enveloppes.
-2. **P1/P2** : CAN XL (B1=a), DoIP/J1939, IA agent (A2=c), `.vcanproj` signé/chiffré si besoin.
+1. **P1/P2** : CAN XL (B1=a), DoIP/J1939, IA agent (A2=c), `.vcanproj` signé/chiffré si besoin.
+2. **Dette connue** : le test DOM `tests/test_ui.cjs` n'est pas rejoué en local (node absent) — il tourne
+   en CI ; le hash projet et la fenêtre performance n'ont pas encore d'UI test jsdom.
 
 Décisions P0.5 **prises** (documentées ci-dessus) : bundle = scénario + définitions + carte CAN
 dérivée + config de run ; hash = SHA-256 C++ sur la forme canonique, stocké dans la section projet

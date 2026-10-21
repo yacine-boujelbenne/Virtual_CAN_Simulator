@@ -20,6 +20,7 @@ jobs:
           python3 tests/test_adas_fusion.py -v
           python3 tests/test_isotp_vectors.py -v
           python3 tests/test_project_ab.py -v
+          python3 tests/test_performance.py -v
       - name: Build ECU and controller images (includes C++ tests)
         run: docker compose build
       - name: Start all nine containers

@@ -20,7 +20,7 @@ docker compose down
 
 Docker Desktop (Windows/macOS) or Docker Engine with Compose v2 (Linux) is required. There is no host CAN setup, privileged container, Docker socket mount, cloud API requirement or CDN dependency.
 
-## One dashboard, five workspaces
+## One dashboard, six workspaces
 
 | Workspace | What it shows |
 |---|---|
@@ -29,6 +29,7 @@ Docker Desktop (Windows/macOS) or Docker Engine with Compose v2 (Linux) is requi
 | CAN analyzer | Protocol, BRS, segment, IDs, byte length versus DLC, raw bytes, decoded signals and delivery/drop status |
 | Diagnostics | UDS requests over real ISO-TP framing to a selected ECU worker on classic CAN or CAN FD, encoded by the C++ session engine |
 | ECU builder | JSON editor, seven templates, strict DBC subset import, optional AI adapter, validation, reserve-container assignment and the `.vcanproj` project file |
+| Performance | Latency decomposition per ECU (sampled → computed → delivered → applied), bus load, backlog, throughput and a 30-second latency timeline |
 
 The theme uses white, light green, green and charcoal. Purple is limited to a small navigation accent.
 
@@ -66,6 +67,7 @@ Containers share Docker's host OS kernel. Virtual CPU/RAM/flash, I/O and watchdo
 9. **Diagnostics:** read the demonstration VIN on classic CAN, then CAN FD. Inspect the actual SF/FF/CF/FC records.
 10. **New ECU:** build an offline preview, review/validate it, and assign the reserve container. Reset releases that assignment.
 11. **Reproducible project:** export the laboratory as a `.vcanproj` file, edit it, import it back and compare the SHA-256 project hash.
+12. **Performance:** open the Performance workspace, drive the vehicle, then add a latency rule on the ADAS segment and watch the delivery p95 of the radar and ADAS ECUs move while the task cost stays flat.
 
 ## Native development
 
@@ -79,6 +81,7 @@ python3 tests/test_envelopes.py -v
 python3 tests/test_adas_fusion.py -v
 python3 tests/test_isotp_vectors.py -v
 python3 tests/test_project_ab.py -v
+python3 tests/test_performance.py -v
 python3 app/run_local.py
 ```
 
@@ -109,6 +112,20 @@ Definitions contain inputs, variables, periodic restricted-expression tasks, sta
 Modeled task cost scales with virtual CPU clock. Kernel snapshots report modeled CPU load and RAM/flash use. Compose separately limits actual container resources. A missing worker prevents a partial tick from advancing; duplicate retries return cached results.
 
 Messages added through the UI are ephemeral. Download JSON and declare its path in the scenario plus its dedicated worker mapping in Compose to retain it. Extra simultaneous ECUs need extra worker services; no main-container fallback is used.
+
+## Performance dashboard
+
+The C++ core owns the simulation clock, so it also owns the measurements. Every snapshot carries a `performance` window:
+
+| Metric | Meaning |
+|---|---|
+| Task cost | `computed_at_us - sampled_at_us` of the ECU kernel, per ECU (p50/p95/max/mean over a rolling window) |
+| Delivery latency | from the producer's `computed_at_us` to the delivery of the frame on the bus, per producer; reacts to the flow policies |
+| Actuation latency | from the ECU computation to the plant commit, at the tick boundary |
+| Control chain | `sampled_at_us` → `applied_at_us`; quantized by the 10 ms barrier, so the variable part is the task cost |
+| Throughput | frames per bus and per ECU (tx/rx), dropped frames, load estimate and backlog |
+
+The dashboard renders those numbers and a 30-second timeline of task cost and delivery latency. `tests/test_performance.py` checks the ordering of the percentiles, the barrier quantization of the control chain, the drop counters and the reset of the measurement window.
 
 ## Project file (.vcanproj)
 

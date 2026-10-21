@@ -83,6 +83,7 @@ function render() {
   if(activeTab==='network')renderNetwork();
   if(activeTab==='analyze')renderFrames();
   if(activeTab==='diagnose')renderDTCs();
+  if(activeTab==='performance')renderPerformance();
 }
 function renderNodes() {
   const holder=$('ecu-nodes'),area=$('topology'),width=area.clientWidth,height=area.clientHeight,narrow=width<540;
@@ -185,6 +186,57 @@ function renderDTCs() {
   const codes=state.ecus.flatMap(e=>e.dtcs.map(d=>({...d,ecu:e.name})));
   $('dtcs').innerHTML=codes.map(d=>'<div class="dtc'+(!d.active?' recovered':'')+'"><div class="dtc-header"><strong>'+escape(d.code)+'</strong><span class="chip">'+(d.active?'ACTIVE':'STORED / RECOVERED')+'</span></div><h2>'+escape(d.name)+'</h2><p>'+escape(d.ecu)+' · '+escape(d.severity)+'</p></div>').join('')||'<div class="empty">No diagnostic trouble codes.<br>Inject a sensor fault to test the detection chain.</div>';
 }
+const micros=value=>number((value||0)/1000,2)+' ms';
+function renderPerformance() {
+  const perf=state.performance||{},totals=perf.totals||{},ecus=perf.ecus||[],buses=perf.buses||[];
+  $('perf-window').textContent=number(totals.window_s||0,1)+' s window · '+number(totals.ticks||0,0)+' ticks';
+  const kpis=[
+    ['E2E CONTROL LATENCY',micros(totals.chain_p95_us),'sampled → applied · barrier '+number(totals.step_ms||10,0)+' ms'],
+    ['TASK COST P95',micros(totals.task_p95_us),'worst ECU computation'],
+    ['DELIVERY P95',micros(totals.delivery_p95_us),'computed → delivered on the bus'],
+    ['THROUGHPUT',number(totals.frame_rate_hz||0,0)+' f/s',number(totals.dropped||0,0)+' dropped · '+number(totals.frames||0,0)+' frames']
+  ];
+  $('perf-kpis').innerHTML=kpis.map(([label,value,note])=>'<div class="bus-card"><span class="eyebrow">'+escape(label)+'</span><h2>'+escape(value)+'</h2><strong>'+escape(value)+'</strong><small>'+escape(note)+'</small></div>').join('');
+  const worst=Math.max(1,...ecus.map(e=>e.task.p95||0));
+  $('perf-ecus').innerHTML=ecus.map(e=>'<tr><td>'+escape(e.name)+'<div class="meter"><i style="width:'+Math.min(100,100*(e.task.p95||0)/worst)+'%"></i></div></td>'
+    +'<td>'+micros(e.task.p50)+'</td><td>'+micros(e.task.p95)+'</td><td>'+micros(e.task.max)+'</td>'
+    +'<td>'+micros(e.delivery.p95)+'</td><td>'+(e.e2e.count?micros(e.e2e.p95):'—')+'</td>'
+    +'<td>'+number(e.tx||0,0)+'</td><td>'+number(e.rx||0,0)+'</td><td>'+number(e.dropped||0,0)+'</td><td>'+number(e.states||0,0)+'</td></tr>').join('')
+    ||'<tr><td colspan="10">Run the simulation to collect latency samples.</td></tr>';
+  $('perf-buses').innerHTML=buses.map(b=>'<div class="registry-row"><div>'+escape(b.name||b.id)+'<small>'+number(b.frame_rate_hz||0,0)+' frame/s · backlog '+number(b.backlog_us||0,0)+' µs</small></div>'
+    +'<span>'+number(b.load_percent||0,2)+'%</span></div><div class="meter'+(b.load_percent>70?' graphite':'')+'"><i style="width:'+Math.min(100,b.load_percent||0)+'%"></i></div>'
+    +'<p class="tip">'+number(b.frames||0,0)+' frames · '+number(b.dropped||0,0)+' dropped</p>').join('')||'<p>No bus defined.</p>';
+  setOptions('perf-ecu',ecus.map(e=>[e.name,e.name]));
+  drawPerformanceChart();
+}
+function drawPerformanceChart() {
+  const perf=state.performance||{},ecus=perf.ecus||[],box=$('perf-chart');
+  if(!box||!ecus.length)return;
+  const ecu=ecus.find(e=>e.name===$('perf-ecu').value)||ecus[0];
+  const end=state.time||0,start=Math.max(0,end-30);
+  const task=[],delivery=[];
+  for(const sample of ecu.timeline||[]) {
+    const t=(sample.t_us||0)/1e6;if(t<start||t>end+1e-6)continue;
+    if(sample.task_us!=null)task.push([t,sample.task_us]);
+    if(sample.delivery_us!=null)delivery.push([t,sample.delivery_us]);
+  }
+  const values=[...task,...delivery].map(p=>p[1]);
+  const top=Math.max(1000,...values)*1.15;
+  const w=box.clientWidth||760,h=210,left=52,right=w-14,top_=14,bottom=h-26;
+  const x=t=>left+(t-start)/30*(right-left),y=v=>bottom-Math.min(1,v/top)*(bottom-top_);
+  const path=points=>points.length?points.map((p,i)=>(i?'L':'M')+x(p[0]).toFixed(1)+' '+y(p[1]).toFixed(1)).join(' '):'';
+  let grid='';
+  for(let i=0;i<=4;i++){const value=top*i/4,gy=y(value);grid+='<line x1="'+left+'" y1="'+gy.toFixed(1)+'" x2="'+right+'" y2="'+gy.toFixed(1)+'" stroke="#e6eedd"/>'
+    +'<text x="'+(left-8)+'" y="'+(gy+3).toFixed(1)+'" text-anchor="end" font-size="9" font-family="monospace" fill="#8a9e7a">'+number(value/1000,1)+'</text>';}
+  for(let i=0;i<=6;i++){const t=start+i*5,gx=x(t);grid+='<text x="'+gx.toFixed(1)+'" y="'+(bottom+16)+'" text-anchor="middle" font-size="9" font-family="monospace" fill="#8a9e7a">'+number(t,0)+'s</text>';}
+  const empty=!task.length&&!delivery.length;
+  box.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Task cost and delivery latency timeline">'+grid
+    +'<path d="'+path(task)+'" fill="none" stroke="#75a640" stroke-width="2"/>'
+    +'<path d="'+path(delivery)+'" fill="none" stroke="#697866" stroke-width="1.6" stroke-dasharray="4 3"/>'
+    +(empty?'<text x="'+(w/2)+'" y="'+(h/2)+'" text-anchor="middle" font-size="11" font-family="monospace" fill="#8a9e7a">NO SAMPLES YET — RUN THE SIMULATION</text>':'')
+    +'<text x="'+left+'" y="'+(bottom+16)+'" font-size="9" font-family="monospace" fill="#8a9e7a"></text></svg>'
+    +'<div class="legend"><span class="legend-dot"></span>task cost '+escape(ecu.name)+' · <span class="legend-dot graphite"></span>bus delivery latency · scale in ms</div>';
+}
 $('play').onclick=guarded(()=>command(state.running?'pause':'run'));
 $('step').onclick=guarded(async()=>{await command('pause');await command('step');});
 $('reset').onclick=guarded(async()=>{await command('reset');frameSelection=null;toast('Scenario reset.');});
@@ -200,6 +252,7 @@ $('abs-demo').onclick=guarded(async()=>{
   await command('controls',{values:{throttle:0,brake:1,road_friction:.2}});await command('run');toast('Low-friction braking active. Inspect the ABS ECU and BrakeStatus frames.');
 });
 $('frame-filter').oninput=()=>state&&renderFrames();
+$('perf-ecu').onchange=()=>state&&drawPerformanceChart();
 $('uds-preset').onchange=()=>$('uds-bytes').value=$('uds-preset').value;
 $('send-uds').onclick=guarded(async()=>{
   const tokens=$('uds-bytes').value.trim().split(/\s+/);

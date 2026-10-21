@@ -20,6 +20,21 @@ void check(bool ok, const std::string &message) {
     if (!ok) throw std::invalid_argument(message);
 }
 void requireFinite(double v) {check(std::isfinite(v), "Non-finite numeric value");}
+// Nearest-rank percentile over an ascending sample vector.
+double percentile(const std::vector<double> &sorted,double share) {
+    if(sorted.empty())return 0;
+    auto index=static_cast<size_t>(std::ceil(share*sorted.size()));
+    if(index==0)index=1;
+    if(index>sorted.size())index=sorted.size();
+    return sorted[index-1];
+}
+Json statistics(const std::vector<double> &values) {
+    if(values.empty())return {{"count",0},{"p50",0.0},{"p95",0.0},{"max",0.0},{"mean",0.0}};
+    auto sorted=values;std::sort(sorted.begin(),sorted.end());
+    double sum=0;for(auto v:sorted)sum+=v;
+    return {{"count",sorted.size()},{"p50",percentile(sorted,0.50)},{"p95",percentile(sorted,0.95)},
+        {"max",sorted.back()},{"mean",sum/static_cast<double>(sorted.size())}};
+}
 double expression(const Json &e, const std::map<std::string,double> &values, unsigned depth = 0) {
     check(depth < 24, "Expression nesting limit");
     if (e.is_number()) {double v=e.get<double>(); requireFinite(v); return v;}
@@ -238,6 +253,8 @@ void SimulationManager::reset() { applyScenario(readJson(scenarioPath_),nullptr)
 // missing they are read from the scenario directory, which is how a project on disk starts.
 void SimulationManager::applyScenario(const Json &scenario,const Json *inlineDefinitions) {
     scenario_=scenario;if(!scenario_.contains("gateway_routes"))scenario_["gateway_routes"]=Json::array();epoch_++;prepared_=nullptr;policies_=Json::array();scheduled_=Json::array();busFreeUs_.clear();busBusyUs_.clear();dropped_=0;stepMs_=scenario_.at("step_ms");
+    // A new scenario starts a new measurement window.
+    metrics_.clear();busMetrics_.clear();
     check(stepMs_>=1&&stepMs_<=100,"Simulation step must be 1..100 ms");
     check(scenario_.value("bitrate",500000)>=10000 && scenario_.value("bitrate",500000)<=1000000,"Invalid CAN bitrate");
     ecus_.clear();monitor_=std::make_unique<CanBus>(CanBus::Backend::Internal,channel_);monitor_->init();
@@ -323,7 +340,7 @@ Json SimulationManager::prepareTick() {
             bool interested=false;
             for(auto &m:ecu.definition.at("messages"))
                 if(m.at("direction")=="rx"&&m.at("id")==delivery.at("frame").at("id")&&m.value("bus","powertrain")==delivery.at("frame").value("bus","powertrain"))interested=true;
-            if(interested) {ecu.inbox.push_back(delivery.at("frame"));receivers++;}
+            if(interested) {ecu.inbox.push_back(delivery.at("frame"));receivers++;metrics_[ecu.definition.at("name").get<std::string>()].rx++;}
         }
         for(auto &record:frames_)if(record.value("seq",UINT64_MAX)==seq) {
             record["delivered_at_us"]=static_cast<uint64_t>(arrival);
@@ -384,14 +401,29 @@ Json SimulationManager::completeTick(const Json &results) {
         auto &ecu=ecus_[i];const auto &r=results[i];
         auto previous=ecu.state;ecu.state=r.at("state").get<std::string>();ecu.values=r.at("values").get<std::map<std::string,double>>();ecu.hardware=r.at("hardware");
         ecu.timing=r.at("timing");
+        auto &metrics=metrics_[ecu.definition.at("name").get<std::string>()];
+        // Task cost: the ECU declared when it finished computing on the simulation clock.
+        uint64_t sampledAt=ecu.timing.at("sampled_at_us").get<uint64_t>(),computedAt=ecu.timing.at("computed_at_us").get<uint64_t>();
+        double taskUs=static_cast<double>(computedAt-sampledAt);
+        metrics.task.push_back(taskUs);metrics.taskTimeline.push_back({computedAt,taskUs});
+        if(metrics.task.size()>600)metrics.task.erase(metrics.task.begin());
+        if(metrics.taskTimeline.size()>300)metrics.taskTimeline.erase(metrics.taskTimeline.begin());
         ecu.dtcActive=r.at("dtc_active").get<std::map<std::string,bool>>();ecu.dtcStored=r.at("dtc_stored").get<std::map<std::string,bool>>();
-        if(previous!=ecu.state)events_.push_back({{"time",tick_*stepMs_/1000.0},{"ecu",ecu.definition.at("name")},{"from",previous},{"to",ecu.state}});
+        if(previous!=ecu.state) {events_.push_back({{"time",tick_*stepMs_/1000.0},{"ecu",ecu.definition.at("name")},{"from",previous},{"to",ecu.state}});metrics.states++;}
         // Plant commit is quantized to the tick boundary (addendum B): applied_at_us >= computed_at_us always.
         uint64_t tickUs=static_cast<uint64_t>(tick_)*stepMs_*1000ULL;
         uint64_t appliedUs=tickUs+uint64_t(stepMs_)*1000ULL;
         for(auto &binding:ecu.definition.at("bindings").items()) {
             double applied=ecu.values.at(binding.value().get<std::string>());
-            if(world_.count(binding.key())&&world_.at(binding.key())!=applied)
+            // Control chain measured every tick: computed -> applied (plant commit) and sampled -> applied.
+            double actuationUs=static_cast<double>(appliedUs-computedAt);
+            double chainUs=static_cast<double>(appliedUs-tickUs);
+            metrics.actuation.push_back(actuationUs);metrics.e2e.push_back(chainUs);
+            metrics.chainTimeline.push_back({appliedUs,chainUs});
+            if(metrics.actuation.size()>600)metrics.actuation.erase(metrics.actuation.begin());
+            if(metrics.e2e.size()>600)metrics.e2e.erase(metrics.e2e.begin());
+            if(metrics.chainTimeline.size()>300)metrics.chainTimeline.erase(metrics.chainTimeline.begin());
+            if(world_.count(binding.key())&&world_.at(binding.key())!=applied) {
                 // Envelope B: applied_at_us is the plant commit of the actuator value, distinct from its computation.
                 pushActuation({{"contract_version",2},{"kind","event_chain"},{"stage","actuation"},
                     {"correlation_id",std::to_string(epoch_)+":"+std::to_string(tick_)+":"+binding.key()},
@@ -400,6 +432,7 @@ Json SimulationManager::completeTick(const Json &results) {
                     {"name",binding.key()},{"value",applied},{"validity","valid"},{"quality_reason","none"},
                     {"timestamps",{{"sampled_at_us",tickUs},{"computed_at_us",ecu.timing.at("computed_at_us")},
                         {"applied_at_us",appliedUs}}}});
+            }
             world_[binding.key()]=applied;
         }
         for(auto &frame:r.at("tx_frames"))for(auto &m:ecu.definition.at("messages"))
@@ -444,6 +477,48 @@ Json SimulationManager::completeTick(const Json &results) {
     return {{"committed",true},{"tick",tick_},{"epoch",epoch_}};
 }
 void SimulationManager::step(unsigned count) {check(!distributed_,"Distributed mode requires the worker barrier");check(count>=1&&count<=1000,"Step count must be 1..1000");for(unsigned i=0;i<count;++i)tick();}
+Json SimulationManager::performance() const {
+    Json ecus=Json::array();
+    double chainP95=0,taskP95=0,deliveryP95=0;
+    for(auto &ecu:ecus_) {
+        auto name=ecu.definition.at("name").get<std::string>();
+        EcuMetrics empty;const EcuMetrics &m=metrics_.count(name)?metrics_.at(name):empty;
+        Json task=statistics(m.task),e2e=statistics(m.e2e),delivery=statistics(m.delivery),actuation=statistics(m.actuation);
+        chainP95=std::max(chainP95,e2e.at("p95").get<double>());
+        taskP95=std::max(taskP95,task.at("p95").get<double>());
+        deliveryP95=std::max(deliveryP95,delivery.at("p95").get<double>());
+        Json timeline=Json::array();
+        std::vector<std::tuple<uint64_t,int,double>> merged;
+        for(auto &sample:m.taskTimeline)merged.emplace_back(sample.first,0,sample.second);
+        for(auto &sample:m.deliveryTimeline)merged.emplace_back(sample.first,1,sample.second);
+        for(auto &sample:m.chainTimeline)merged.emplace_back(sample.first,2,sample.second);
+        std::sort(merged.begin(),merged.end());
+        for(auto &sample:merged) {
+            const char *key=std::get<1>(sample)==0?"task_us":std::get<1>(sample)==1?"delivery_us":"chain_us";
+            timeline.push_back({{"t_us",std::get<0>(sample)},{key,std::get<2>(sample)}});
+        }
+        ecus.push_back({{"name",name},{"task",task},{"e2e",e2e},{"delivery",delivery},{"actuation",actuation},
+            {"tx",m.tx},{"rx",m.rx},{"dropped",m.dropped},{"states",m.states},{"timeline",timeline}});
+    }
+    Json buses=Json::array();
+    uint64_t frames=0,drops=0;
+    for(auto &bus:scenario_.value("buses",Json::array())) {
+        auto id=bus.at("id").get<std::string>();
+        auto counters=busMetrics_.count(id)?busMetrics_.at(id):BusMetrics{};
+        auto item=bus;auto busy=busBusyUs_.find(id);
+        item["load_percent"]=tick_&&busy!=busBusyUs_.end()?100.0*busy->second/(tick_*stepMs_*1000.0):0;
+        auto backlog=busFreeUs_.find(id);item["backlog_us"]=backlog==busFreeUs_.end()?0:std::max(0.0,backlog->second-tick_*stepMs_*1000.0);
+        item["frames"]=counters.frames;item["dropped"]=counters.dropped;
+        item["frame_rate_hz"]=tick_?static_cast<double>(counters.frames)/(tick_*stepMs_/1000.0):0;
+        frames+=counters.frames;drops+=counters.dropped;
+        buses.push_back(item);
+    }
+    return {{"ecus",ecus},{"buses",buses},
+        {"totals",{{"frames",frames},{"dropped",drops},{"envelopes",envelopes_.size()},{"actuations",actuations_.size()},
+            {"ticks",tick_},{"step_ms",stepMs_},{"window_s",static_cast<double>(tick_*stepMs_)/1000.0},
+            {"frame_rate_hz",tick_?static_cast<double>(frames)/(tick_*stepMs_/1000.0):0},
+            {"chain_p95_us",chainP95},{"task_p95_us",taskP95},{"delivery_p95_us",deliveryP95}}}};
+}
 Json SimulationManager::snapshot() const {
     Json data={{"name",scenario_.value("name","Vehicle lab")},{"time",tick_*stepMs_/1000.0},{"step_ms",stepMs_},{"running",running_},{"controls",controls_},{"world",world_},
         {"sensors",sensors_},{"frames",frames_},{"events",events_},{"frame_count",frameCount_},{"bitrate",scenario_.value("bitrate",500000)},
@@ -471,6 +546,8 @@ Json SimulationManager::snapshot() const {
         auto backlog=busFreeUs_.find(id);item["backlog_us"]=backlog==busFreeUs_.end()?0:std::max(0.0,backlog->second-tick_*stepMs_*1000.0);
         data["buses"].push_back(item);
     }
+    // Performance window: per-ECU latency decomposition, bus throughput and backlog.
+    data["performance"]=performance();
     return data;
 }
 Json SimulationManager::diagnostic(const Json &request) {
@@ -902,6 +979,25 @@ void SimulationManager::transmit(const std::string &source,const Json &message,c
         producerTiming.is_number()?producerTiming.get<double>():0.0),finishUs=startUs+durationUs;
     if(!drop) {busFreeUs_[bus]=finishUs;busBusyUs_[bus]+=durationUs;}
     else dropped_++;
+    // Performance counters: frames per bus and delivery latency per producer.
+    auto &busMetrics=busMetrics_[bus];
+    busMetrics.frames++;
+    bool isEcu=false;for(auto &ecu:ecus_)if(ecu.definition.at("name")==source)isEcu=true;
+    if(isEcu) {
+        auto &metrics=metrics_[source];
+        metrics.tx++;
+        if(drop)metrics.dropped++;
+        if(!drop&&producerTiming.is_number()) {
+                double deliveryUs=finishUs+latency-producerTiming.get<double>();
+            if(deliveryUs>=0) {
+                metrics.delivery.push_back(deliveryUs);
+                metrics.deliveryTimeline.push_back({static_cast<uint64_t>(finishUs+latency),deliveryUs});
+                if(metrics.delivery.size()>600)metrics.delivery.erase(metrics.delivery.begin());
+                if(metrics.deliveryTimeline.size()>300)metrics.deliveryTimeline.erase(metrics.deliveryTimeline.begin());
+            }
+        }
+    }
+    if(drop)busMetrics.dropped++;
     frameCount_++;frameBits_+=static_cast<uint64_t>(arbitrationBits+payloadBits);
     uint64_t seq=frameSeq_++;
     std::map<std::string,double> decoded;if(!message.at("signals").empty())decode(message,frame,decoded);

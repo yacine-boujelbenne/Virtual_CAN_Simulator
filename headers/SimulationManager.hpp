@@ -24,6 +24,13 @@ private:
         std::unique_ptr<EcuKernel> kernel;
         Json inbox=Json::array(), hardware=Json::object(), timing=Json::object();
     };
+    // Rolling performance window: task cost, end-to-end latency and frame counters per ECU.
+    struct EcuMetrics {
+        std::vector<double> task, e2e, delivery, actuation;
+        std::vector<std::pair<uint64_t,double>> taskTimeline, deliveryTimeline, chainTimeline;
+        uint64_t tx=0, rx=0, dropped=0, states=0;
+    };
+    struct BusMetrics {uint64_t frames=0, dropped=0;};
     std::string scenarioPath_, channel_;
     Json scenario_, sensors_, frames_ = Json::array(), events_ = Json::array();
     std::map<std::string,double> world_, controls_;
@@ -39,6 +46,8 @@ private:
     std::map<std::string,double> busFreeUs_, busBusyUs_;
     std::map<std::string,std::unique_ptr<IsoTp>> testers_;
     Json definitions_=Json::object();
+    std::map<std::string,EcuMetrics> metrics_;
+    std::map<std::string,BusMetrics> busMetrics_;
     uint64_t dropped_=0, frameSeq_=0;
     void pushEnvelope(const Json &envelope);
     void pushActuation(const Json &envelope);
@@ -54,4 +63,5 @@ private:
     Json projectContent() const;
     Json exportProject() const;
     Json importProject(const Json &project);
+    Json performance() const;
 };
