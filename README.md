@@ -27,7 +27,7 @@ Docker Desktop (Windows/macOS) or Docker Engine with Compose v2 (Linux) is requi
 | Vehicle | Synthetic road scene, driver/ACC/AEB controls, seven ECU nodes, container health, virtual hardware and live telemetry |
 | Network control | Classic CAN/CAN FD segments, gateway routes, registry, message drop and latency policies |
 | CAN analyzer | Protocol, BRS, segment, IDs, byte length versus DLC, raw bytes, decoded signals and delivery/drop status |
-| Diagnostics | UDS requests over real ISO-TP framing to a selected ECU worker on classic CAN or CAN FD |
+| Diagnostics | UDS requests over real ISO-TP framing to a selected ECU worker on classic CAN or CAN FD, encoded by the C++ session engine |
 | ECU builder | JSON editor, seven templates, strict DBC subset import, optional AI adapter, validation and reserve-container assignment |
 
 The theme uses white, light green, green and charcoal. Purple is limited to a small navigation accent.
@@ -76,6 +76,7 @@ ctest --test-dir build --output-on-failure
 python3 tests/test_protocols.py -v
 python3 tests/test_envelopes.py -v
 python3 tests/test_adas_fusion.py -v
+python3 tests/test_isotp_vectors.py -v
 python3 app/run_local.py
 ```
 
@@ -112,7 +113,7 @@ Without AI_ENDPOINT, the builder selects a local template and clearly reports th
 
 ## Scope
 
-This is functional software-in-the-loop for learning and experimentation. It does not reproduce proprietary ECU firmware or implement a full ADS. CAN priority and estimated serialization are modeled; electrical errors, bit-exact CRC/stuffing, bus-off/recovery and real-time deadlines are not. ISO-TP supports normal addressing and 1–4095-byte PDUs. Diagnostic session/security gating, full automotive Ethernet/DoIP, raw perception, steering/lane models, hardware/HIL and persistent trace/replay remain future work.
+This is functional software-in-the-loop for learning and experimentation. It does not reproduce proprietary ECU firmware or implement a full ADS. CAN priority and estimated serialization are modeled; electrical errors, bit-exact CRC/stuffing, bus-off/recovery and real-time deadlines are not. ISO-TP supports normal and 11-bit extended addressing, 1–4095-byte PDUs and the N_As/N_Bs/N_Ar/N_Cr timeouts; the conformance vectors in `tests/vectors/isotp` replay the same scenarios against the C++ engine and a Python oracle. Diagnostic session/security gating, full automotive Ethernet/DoIP, raw perception, steering/lane models, hardware/HIL and persistent trace/replay remain future work.
 
 [Protocol research](docs/PROTOCOL_RESEARCH.md) records primary Linux and NHTSA sources and the exact boundaries.
 

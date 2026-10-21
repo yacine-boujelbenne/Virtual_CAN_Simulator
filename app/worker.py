@@ -4,7 +4,6 @@ import json,os,signal,threading,time
 from pathlib import Path
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from process import KernelProcess
-from transport import IsoTp
 
 ROOT=Path(__file__).resolve().parent.parent
 BINARY=os.environ.get("ECU_BINARY",str(ROOT/"build/ecu_kernel"))
@@ -27,22 +26,25 @@ class Worker:
             if action=="isotp_start":
                 session=str(body["session"])
                 if len(self.sessions)>=32 and session not in self.sessions:raise ValueError("ISO-TP session limit")
-                self.sessions[session]=(IsoTp(body.get("response_id",0x7e8),body.get("request_id",0x7e0),
-                    fd=body.get("fd",False),link_length=body.get("link_length",8),
-                    block_size=body.get("block_size",8),stmin=body.get("stmin",0)),time.monotonic())
+                # The ISO-TP state machine lives in the C++ kernel; this worker only carries frames.
+                self.kernel.request({"action":"isotp_start","session":session,
+                    "tx_id":body.get("response_id",0x7e8),"rx_id":body.get("request_id",0x7e0),
+                    "fd":body.get("fd",False),"link_length":body.get("link_length",8),
+                    "block_size":body.get("block_size",8),"stmin":body.get("stmin",0),
+                    "extended":body.get("extended",False),"sa":body.get("sa",0),"ta":body.get("ta",0),
+                    "respond":True})
+                self.sessions[session]=time.monotonic()
                 return {"ready":True}
             if action=="isotp_frame":
                 session=str(body["session"])
                 if session not in self.sessions:raise ValueError("Unknown ISO-TP session")
-                endpoint,start=self.sessions[session]
-                if time.monotonic()-start>10:self.sessions.pop(session);raise ValueError("ISO-TP session timeout")
-                frames=endpoint.receive(body["frame"])
-                if endpoint.message is not None:
-                    payload=endpoint.message;endpoint.message=None
-                    response=self.kernel.request({"action":"uds","bytes":payload})
-                    frames.extend(endpoint.send(response["bytes"]))
-                return {"frames":frames}
-            if action=="isotp_end":self.sessions.pop(str(body["session"]),None);return {"closed":True}
+                if time.monotonic()-self.sessions[session]>10:self.sessions.pop(session);raise ValueError("ISO-TP session timeout")
+                return self.kernel.request({"action":"isotp_frame","session":session,"frame":body["frame"]})
+            if action=="isotp_end":
+                session=str(body["session"]);self.sessions.pop(session,None)
+                try:self.kernel.request({"action":"isotp_end","session":session})
+                except Exception:pass
+                return {"closed":True}
             if action=="reset":self.sessions.clear()
             return self.kernel.request(body)
 

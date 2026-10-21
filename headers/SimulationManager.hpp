@@ -37,6 +37,7 @@ private:
     Json prepared_=nullptr, policies_=Json::array(), scheduled_=Json::array();
     Json envelopes_=Json::array(), actuations_=Json::array();
     std::map<std::string,double> busFreeUs_, busBusyUs_;
+    std::map<std::string,std::unique_ptr<IsoTp>> testers_;
     uint64_t dropped_=0, frameSeq_=0;
     void pushEnvelope(const Json &envelope);
     void pushActuation(const Json &envelope);
@@ -47,4 +48,5 @@ private:
     void tick();
     void loadEcu(const Json &definition);
     Json diagnostic(const Json &request);
+    Json isotpTester(const Json &request);
 };

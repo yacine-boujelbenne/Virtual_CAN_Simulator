@@ -1,0 +1,23 @@
+{
+  "name": "timeout_n_as",
+  "description": "The transmitter gives up when no flow control arrives within N_As.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 8,
+    "stmin": 0,
+    "n_as": 100,
+    "n_bs": 1000,
+    "n_ar": 1000,
+    "n_cr": 1000
+  },
+  "steps": [
+    {"actor": "a", "action": "send",
+     "payload": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627",
+     "frames": ["1028000102030405"]},
+    {"actor": "a", "action": "poll", "at": 50},
+    {"actor": "a", "action": "poll", "at": 100, "error": "ISO-TP N_As timeout"}
+  ]
+}

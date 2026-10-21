@@ -1,0 +1,20 @@
+{
+  "name": "addressing_mismatch",
+  "description": "A frame whose address bytes do not name this node is rejected.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 8,
+    "stmin": 0,
+    "extended": true,
+    "sa": 241,
+    "ta": 242
+  },
+  "steps": [
+    {"actor": "b", "action": "receive", "frame": "f1f20322f190", "frames": []},
+    {"actor": "b", "action": "message", "value": "22f190"},
+    {"actor": "b", "action": "receive", "frame": "f1f10322f190", "error": "ISO-TP addressing mismatch"}
+  ]
+}

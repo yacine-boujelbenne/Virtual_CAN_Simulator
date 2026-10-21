@@ -1,0 +1,21 @@
+{
+  "name": "timeout_n_cr",
+  "description": "The receiver gives up when the message is not completed within N_Cr after the first frame.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 8,
+    "stmin": 0,
+    "n_as": 1000,
+    "n_bs": 1000,
+    "n_ar": 1000,
+    "n_cr": 100
+  },
+  "steps": [
+    {"actor": "b", "action": "receive", "frame": "1014001122334455", "frames": ["300800"]},
+    {"actor": "b", "action": "poll", "at": 99},
+    {"actor": "b", "action": "poll", "at": 100, "error": "ISO-TP N_Cr timeout"}
+  ]
+}

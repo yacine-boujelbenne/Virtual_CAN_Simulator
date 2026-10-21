@@ -1,0 +1,30 @@
+{
+  "name": "timeout_n_ar",
+  "description": "The receiver gives up when no consecutive frame arrives within N_Ar after the flow control of a block boundary.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 4,
+    "stmin": 0,
+    "n_as": 1000,
+    "n_bs": 1000,
+    "n_ar": 100,
+    "n_cr": 1000
+  },
+  "steps": [
+    {"actor": "a", "action": "send",
+     "payload": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627",
+     "frames": ["1028000102030405"]},
+    {"actor": "b", "action": "receive", "frame": "1028000102030405", "frames": ["300400"]},
+    {"actor": "a", "action": "receive", "frame": "300400",
+     "frames": ["21060708090a0b0c", "220d0e0f10111213", "231415161718191a", "241b1c1d1e1f2021"]},
+    {"actor": "b", "action": "receive", "frame": "21060708090a0b0c", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "220d0e0f10111213", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "231415161718191a", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "241b1c1d1e1f2021", "frames": ["300400"]},
+    {"actor": "b", "action": "poll", "at": 99},
+    {"actor": "b", "action": "poll", "at": 100, "error": "ISO-TP N_Ar timeout"}
+  ]
+}

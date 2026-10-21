@@ -1,0 +1,20 @@
+{
+  "name": "single_frame_classic",
+  "description": "A three byte UDS request and its answer travel in one classic CAN frame each.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 8,
+    "stmin": 0
+  },
+  "steps": [
+    {"actor": "a", "action": "send", "payload": "22f190", "frames": ["0322f190"]},
+    {"actor": "b", "action": "receive", "frame": "0322f190", "frames": []},
+    {"actor": "b", "action": "message", "value": "22f190"},
+    {"actor": "b", "action": "send", "payload": "62f190", "frames": ["0362f190"]},
+    {"actor": "a", "action": "receive", "frame": "0362f190", "frames": []},
+    {"actor": "a", "action": "message", "value": "62f190"}
+  ]
+}

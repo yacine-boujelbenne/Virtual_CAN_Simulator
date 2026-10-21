@@ -14,10 +14,11 @@ jobs:
       - name: Native build and envelope/perception checks
         run: |
           python3 -m pip install --break-system-packages jsonschema || python3 -m pip install jsonschema
-          g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/SimulationManager.cpp app/main.cpp -o build/vehicle_sim -lpthread
-          g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/SimulationManager.cpp app/ecu_main.cpp -o build/ecu_kernel -lpthread
+          g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/IsoTp.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/SimulationManager.cpp app/main.cpp -o build/vehicle_sim -lpthread
+          g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/IsoTp.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/SimulationManager.cpp app/ecu_main.cpp -o build/ecu_kernel -lpthread
           python3 tests/test_envelopes.py -v
           python3 tests/test_adas_fusion.py -v
+          python3 tests/test_isotp_vectors.py -v
       - name: Build ECU and controller images (includes C++ tests)
         run: docker compose build
       - name: Start all nine containers

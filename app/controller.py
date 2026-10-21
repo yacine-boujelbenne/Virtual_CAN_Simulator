@@ -3,7 +3,6 @@ import json,os,threading,time,uuid,urllib.request,urllib.error
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from process import KernelProcess
-from transport import IsoTp
 
 ROOT=Path(__file__).resolve().parent.parent
 TOKEN=os.environ.get("CLUSTER_TOKEN","local-development-token")
@@ -81,13 +80,17 @@ class Engine:
         if not isinstance(payload,list) or any(type(b) is not int or not 0<=b<=255 for b in payload):
             raise ValueError("Diagnostic bytes must be integers 0..255")
         fd=bool(body.get("fd",False));length=body.get("link_length",64 if fd else 8)
-        tester=IsoTp(0x7e0,0x7e8,fd=fd,link_length=length,block_size=body.get("block_size",8),stmin=body.get("stmin",0))
+        block=body.get("block_size",8);stmin=body.get("stmin",0)
         session=uuid.uuid4().hex;endpoint=self.registry[name]
-        self._rpc(endpoint,{"action":"isotp_start","session":session,"fd":fd,"link_length":length,
-            "block_size":body.get("block_size",8),"stmin":body.get("stmin",0)})
-        queue=[(True,f) for f in tester.send(payload)];trace=[];start=time.monotonic()
+        self._rpc(endpoint,{"action":"isotp_start","session":session,"response_id":0x7e8,"request_id":0x7e0,
+            "fd":fd,"link_length":length,"block_size":block,"stmin":stmin})
+        # The tester session lives in the C++ core; this controller only carries frames.
+        self.core.request({"action":"isotp_tester_start","session":session,"tx_id":0x7e0,"rx_id":0x7e8,
+            "fd":fd,"link_length":length,"block_size":block,"stmin":stmin})
+        queue=[(True,f) for f in self.core.request({"action":"isotp_tester_send","session":session,"bytes":payload})["frames"]]
+        trace=[];start=time.monotonic();message=None
         try:
-            while tester.message is None:
+            while message is None:
                 if not queue or time.monotonic()-start>10:raise RuntimeError("ISO-TP response timeout")
                 to_worker,frame=queue.pop(0)
                 delay=frame.get("delay_us",0)/1e6
@@ -98,16 +101,21 @@ class Engine:
                 if to_worker:
                     response=self._rpc(endpoint,{"action":"isotp_frame","session":session,"frame":frame})
                     queue.extend((False,f) for f in response["frames"])
-                else:queue.extend((True,f) for f in tester.receive(frame))
+                else:
+                    result=self.core.request({"action":"isotp_tester_receive","session":session,"frame":frame})
+                    queue.extend((True,f) for f in result["frames"])
+                    if result.get("done"):message=result["message"]
                 if len(trace)>2048:raise RuntimeError("ISO-TP frame limit")
             result=self._rpc(endpoint,{"action":"snapshot"})
             # Refresh mirrored diagnostic memory without executing an ECU task or changing time.
             self.core.request({"action":"refresh_ecu","name":name,"snapshot":result})
-            return {"request":" ".join(f"{b:02x}" for b in payload),"response":" ".join(f"{b:02x}" for b in tester.message),
-                "bytes":tester.message,"transport":"ISO-TP / distributed "+("CAN FD" if fd else "CAN"),
+            return {"request":" ".join(f"{b:02x}" for b in payload),"response":" ".join(f"{b:02x}" for b in message),
+                "bytes":message,"transport":"ISO-TP / distributed "+("CAN FD" if fd else "CAN"),
                 "request_id":0x7e0,"response_id":0x7e8,"frames":trace,"frame_count":len(trace),"ecu_container":name}
         finally:
             try:self._rpc(endpoint,{"action":"isotp_end","session":session})
+            except Exception:pass
+            try:self.core.request({"action":"isotp_tester_end","session":session})
             except Exception:pass
     def request(self,command):
         with self.lock:

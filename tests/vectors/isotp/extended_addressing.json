@@ -1,0 +1,23 @@
+{
+  "name": "extended_addressing",
+  "description": "Source and target address bytes precede the protocol control information on every frame.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 8,
+    "stmin": 0,
+    "extended": true,
+    "sa": 241,
+    "ta": 242
+  },
+  "steps": [
+    {"actor": "a", "action": "send", "payload": "22f190", "frames": ["f1f20322f190"]},
+    {"actor": "b", "action": "receive", "frame": "f1f20322f190", "frames": []},
+    {"actor": "b", "action": "message", "value": "22f190"},
+    {"actor": "b", "action": "send", "payload": "62f190", "frames": ["f2f10362f190"]},
+    {"actor": "a", "action": "receive", "frame": "f2f10362f190", "frames": []},
+    {"actor": "a", "action": "message", "value": "62f190"}
+  ]
+}

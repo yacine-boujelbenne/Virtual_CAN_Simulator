@@ -1,0 +1,28 @@
+{
+  "name": "can_fd_escape_and_multiframe",
+  "description": "A nine byte payload uses the CAN FD escape single frame; a thirty byte payload is segmented over a twelve byte link.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": true,
+    "link_length": 12,
+    "block_size": 8,
+    "stmin": 0
+  },
+  "steps": [
+    {"actor": "a", "action": "send", "payload": "010203040506070809",
+     "frames": ["000901020304050607080900"]},
+    {"actor": "b", "action": "receive", "frame": "000901020304050607080900", "frames": []},
+    {"actor": "b", "action": "message", "value": "010203040506070809"},
+    {"actor": "a", "action": "send",
+     "payload": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d",
+     "frames": ["101e00010203040506070809"]},
+    {"actor": "b", "action": "receive", "frame": "101e00010203040506070809", "frames": ["300800"]},
+    {"actor": "a", "action": "receive", "frame": "300800",
+     "frames": ["210a0b0c0d0e0f1011121314", "2215161718191a1b1c1d0000"]},
+    {"actor": "b", "action": "receive", "frame": "210a0b0c0d0e0f1011121314", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "2215161718191a1b1c1d0000", "frames": []},
+    {"actor": "b", "action": "message",
+     "value": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d"}
+  ]
+}

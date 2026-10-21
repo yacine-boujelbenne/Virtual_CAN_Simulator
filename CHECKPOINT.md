@@ -1,4 +1,4 @@
-# CHECKPOINT — Session du 21/10/2026 (P0.3 terminé)
+# CHECKPOINT — Session du 21/10/2026 (P0.4 terminé)
 
 Reprise : relire ce fichier + `git log -1`. Le plan approuvé est P0 → P0.6 + gates (P1/P2 ensuite).
 
@@ -6,17 +6,17 @@ Reprise : relire ce fichier + `git log -1`. Le plan approuvé est P0 → P0.6 + 
 
 | Slice | État | Preuve |
 |---|---|---|
-| P0.0 Environnement | ⚠ partiel | Build g++ manuel vert, tests Python verts, 27 tests C++ verts (shim gtest local). **Bloqué : docker (permission denied) + cmake/libgtest absents** — voir « Actions utilisateur » |
+| P0.0 Environnement | ⚠ partiel | Build g++ manuel vert, tests Python verts, 39 tests C++ verts (shim gtest local). **Bloqué : docker (permission denied) + cmake/libgtest absents** — voir « Actions utilisateur » |
 | P0.1 `event-envelope.v2.json` | ✅ terminé | Draft 2020-12, 3 checks jsonschema |
 | P0.2 Enveloppe timestamps + latence E2E | ✅ terminé + pérennisé | `python3 tests/test_envelopes.py` → 4/4 OK ; régression `test_web` 8/8 + `test_distributed` 5/5 (mode `run_local.py`) |
 | P0.3 ADAS multi-objets + fusion | ✅ terminé | `python3 tests/test_adas_fusion.py` → 5/5 OK ; layout TX/RX identique, 4 slots ; CI vérifie désormais les tests natifs |
-| P0.4 ISO-TP 100 % C++ | ⬜ à faire | |
+| P0.4 ISO-TP 100 % C++ | ✅ terminé | `python3 tests/test_isotp_vectors.py` → 13 vecteurs OK (C++ ↔ oracle Python) ; `tests/test_isotp.cpp` → 12 cas dans `ctest` ; CI link corrigé |
 | P0.5 `.vcanproj` + runs A/B | ⬜ à faire | |
 | P0.6 Onglet Performance dashboard | ⬜ à faire | |
-| Gates G1 (vecteurs protocoles) / G2 (A/B reproductible) | ⬜ à faire | |
+| Gates G1 (vecteurs protocoles) / G2 (A/B reproductible) | G1 ✅ / G2 ⬜ | G1 couvert par `tests/vectors/isotp` + test natif |
 
 Tests verts au moment du checkpoint :
-- natifs : `tests/test_envelopes.py` (4), `tests/test_protocols.py` (6), `tests/test_adas_fusion.py` (5), C++ (27 via shim gtest) ;
+- natifs : `tests/test_envelopes.py` (4), `tests/test_protocols.py` (6), `tests/test_adas_fusion.py` (5), `tests/test_isotp_vectors.py` (13 vecteurs), C++ (39 via shim gtest) ;
 - cluster local : `tests/test_web.py` (8) + `tests/test_distributed.py` (5) via `python3 app/run_local.py`.
 `tests/test_container_failure.py` n'est valide qu'en CI après `docker compose stop ecu-motor` (échec standalone = attendu).
 
@@ -101,17 +101,52 @@ capteur statique `disconnected` ⇒ `obj1_valid=0`, `count=1`, slot 0 intact ; d
 trafic radar perdu ⇒ `radar_age_ms>100`, `adas_fault=1`, `fcw=0`, état `FAULT`, puis récupération ;
 capteur radar bloqué à 700 m ⇒ `radar_fault=1`, `radar_valid=0`, `count=1`, DTC `C1A10`, `adas_fault=1`.
 
+## P0.4 — ce qui a été fait (ISO-TP 100 % C++)
+**Moteur C++ (`headers/IsoTp.hpp`, `src/IsoTp.cpp`)** : session ISO-TP événementielle (ISO 15765-2)
+qui ne touche jamais au bus — le propriétaire lui fournit les trames et republie celles qu'elle
+retourne. La même session sert au chemin embarqué, au chemin distribué (worker) et au testeur.
+
+- Adressage normal **ou étendu 11 bits** (octets source/cible devant le PCI, vérifiés à la réception).
+- CAN classique (8 B) et **CAN FD** (longueurs légales jusqu'à 64 B, trame simple échappée pour
+  8–62 B).
+- Segmentation : FF / FC / CF, **BS et STmin respectés**, numéros de séquence enroulés à 15.
+- PDU 1–4095 B ; timeouts **N_As / N_Bs / N_Ar / N_Cr** évalués sur l'horloge de session
+  (tick de simulation ou temps fourni par l'appelant).
+- Erreurs rejetées **avant** toute mutation d'état : trame simple/première trame malformée, erreur
+  de séquence, FC inattendu, FC avorté, limite de 3 wait frames, STmin réservé.
+
+**Adaptateurs** : `CanTp` (endpoint bloquant) réécrit au-dessus de la session ; `app/worker.py` et
+`app/controller.py` ne transportent plus que des trames (la machine à états est dans le noyau C++).
+
+**Oracle** : `app/transport.py` devient l'**oracle** de référence (horloge injectable), plus une
+implémentation de production. Les vecteurs `tests/vectors/isotp/*.json` (13) sont rejoués deux fois
+— moteur C++ et oracle — et doivent produire les mêmes trames, messages et échecs
+(`tests/test_isotp_vectors.py`). `tests/test_isotp.cpp` rejoue les mêmes scénarios nativement dans
+`ctest` (12 cas).
+
+**Bug trouvé et corrigé pendant la slice** : la session C++ ne libérait pas l'émetteur après la
+dernière trame CF (`tx_.active` restait `true`) → l'endpoint bloquant `CanTp` expirait en timeout
+(3 tests C++ en échec) et une seconde transmission sur la même session était refusée à tort.
+Correctif : `src/IsoTp.cpp` (bloc flow control) ; verrouillé par le vecteur
+`tests/vectors/isotp/sequential_transfers.json` (vérifié : il échoue sans le correctif).
+
+**CI** : `.github/workflows/container.yml` compilait sans `src/IsoTp.cpp` → **link cassé** depuis
+l'introduction de la session ; corrigé, et `tests/test_isotp_vectors.py` ajouté à l'étape native.
+
 ## Comment on lance les choses (natif, pas de docker)
-- Build : `g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/SimulationManager.cpp app/main.cpp -o build/vehicle_sim -lpthread`
+- Build : `g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/IsoTp.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/SimulationManager.cpp app/main.cpp -o build/vehicle_sim -lpthread`
   (et `app/ecu_main.cpp` → `build/ecu_kernel`) ; ~2–3 min, 0 warning attendu.
+- Tests C++ natifs : `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j && ctest --test-dir build`
+  (sans libgtest : shim local dans `/tmp/opencode/gtest`, 39 tests).
 - Cluster distribué sans docker : `python3 app/run_local.py` (8 workers + controller sur 127.0.0.1:8080) ;
   arrêt propre par SIGTERM. `tests/test_web.py` et `tests/test_distributed.py` s'exécutent dessus
   (`TEST_URL=http://127.0.0.1:8080`).
 - Serveur embedded (mode sans workers) : `python3 app/server.py` — **sait que `diagnostic` y retourne un
   snapshot et non `bytes`** (comportement préexistant, `test_web` est conçu pour le distribué).
-- Les binaires doivent exister pour `tests/test_envelopes.py` et `tests/test_adas_fusion.py` (sinon skip).
-- CI (`.github/workflows/container.yml`) : nouveau step « Native build and envelope/perception checks »
-  (build g++ + `test_envelopes.py` + `test_adas_fusion.py`) avant le build Docker.
+- Les binaires doivent exister pour `tests/test_envelopes.py`, `tests/test_adas_fusion.py` et
+  `tests/test_isotp_vectors.py` (sinon skip).
+- CI (`.github/workflows/container.yml`) : step « Native build and envelope/perception checks »
+  (build g++ + `test_envelopes.py` + `test_adas_fusion.py` + `test_isotp_vectors.py`) avant le build Docker.
 
 ## Actions utilisateur en attente (bloquent P0.0 et la CI locale)
 ```
@@ -123,8 +158,12 @@ Ollama est prêt (`llama3.2:1b`, `llama3.2:3b`). PDF de référence : `docs/ECU_
 (la « companion pack » qu'il cite — schemas, `.vcanproj`, CAN map — n'existe pas dans le repo, il faut la créer).
 
 ## Suites immédiates (ordre)
-1. **P0.4 ISO-TP 100 % C++** : sessions event-driven, addressing étendu, timeouts N_*, `tests/vectors/` comme oracle
-   (le Python `app/transport.py` devient le test de référence).
-2. P0.5 `.vcanproj` (export/import + hash de scénario, runs A/B reproductibles).
-3. P0.6 onglet Performance (latence E2E par ECU, bus load, envelopes). Gates G1 (vecteurs protocoles)
-   / G2 (A/B reproductible) + CI.
+1. **P0.5 `.vcanproj`** : format projet (scénario + définitions ECU + carte CAN/DBC + config de run),
+   export/import dans le noyau C++, hash canonique par run, runs A/B reproductibles (gate G2).
+2. **P0.6 onglet Performance** : latence E2E par ECU (sampled → computed → delivered → applied),
+   charge/backlog par bus, timeline des enveloppes.
+3. Gates G1 (déjà couvert par `tests/vectors/isotp` + `tests/test_isotp.cpp`) / G2 (A/B) + CI complète.
+
+Décisions P0.5 à trancher : granularité du bundle (scénario seul vs. scénario + définitions + DBC),
+emplacement du hash (enveloppe v2 vs. section projet), et signature de reproductibilité A/B
+(envelopes, trames, ou les deux).

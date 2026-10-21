@@ -1,0 +1,16 @@
+{
+  "name": "sequence_error",
+  "description": "A consecutive frame with a broken sequence number is rejected.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 8,
+    "stmin": 0
+  },
+  "steps": [
+    {"actor": "b", "action": "receive", "frame": "1014001122334455", "frames": ["300800"]},
+    {"actor": "b", "action": "receive", "frame": "2266778899aabbcc", "error": "ISO-TP sequence error"}
+  ]
+}

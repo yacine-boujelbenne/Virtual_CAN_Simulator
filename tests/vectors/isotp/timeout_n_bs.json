@@ -1,0 +1,24 @@
+{
+  "name": "timeout_n_bs",
+  "description": "The transmitter gives up when the next flow control does not arrive within N_Bs after a block.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 1,
+    "stmin": 0,
+    "n_as": 1000,
+    "n_bs": 100,
+    "n_ar": 1000,
+    "n_cr": 1000
+  },
+  "steps": [
+    {"actor": "a", "action": "send", "payload": "000102030405060708090a0b0c0d0e0f10111213",
+     "frames": ["1014000102030405"]},
+    {"actor": "b", "action": "receive", "frame": "1014000102030405", "frames": ["300100"]},
+    {"actor": "a", "action": "receive", "frame": "300100", "frames": ["21060708090a0b0c"]},
+    {"actor": "a", "action": "poll", "at": 99},
+    {"actor": "a", "action": "poll", "at": 100, "error": "ISO-TP N_Bs timeout"}
+  ]
+}

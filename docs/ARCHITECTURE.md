@@ -90,6 +90,23 @@ Supported demonstration services: 0x10, 0x14, 0x19/02, 0x22 and 0x3E. The demons
 
 DTCs latch stored status on trigger, clear active status on recovery, and remain stored until cleared. Persistent faults relatch on the next kernel tick.
 
+## ISO-TP engine
+
+The protocol is implemented once, in C++, as an event-driven session (`src/IsoTp.cpp`). A session never touches a bus: the owner feeds frames in and puts the returned frames on the wire, so the same engine serves the embedded diagnostic path, the distributed worker path and the tester path.
+
+| Capability | Behavior |
+|---|---|
+| Addressing | Normal addressing, or 11-bit extended addressing with source/target address bytes on every frame |
+| Links | Classic CAN (8 bytes) and CAN FD (legal wire lengths up to 64 bytes, escaped single frame for 8–62 byte PDUs) |
+| Segmentation | First frame, flow control, consecutive frames; block size and STmin honored; sequence numbers wrap at 15 |
+| Payload | 1–4095 bytes per PDU |
+| Timeouts | N_As, N_Bs, N_Ar and N_Cr, evaluated against the session clock, which is the simulation tick or a caller-supplied time |
+| Errors | Malformed single/first frames, sequence errors, unexpected flow control, aborted flow control, wait-frame limit (3) and reserved STmin are rejected before any state change |
+
+`CanTp` (blocking endpoint) and the controller/worker adapters are thin wrappers over that session: the blocking endpoint drives one transfer at a time, while the distributed path carries frames between processes.
+
+`app/transport.py` is the reference oracle of the same protocol, not a second implementation in production. The conformance vectors in `tests/vectors/isotp` are replayed twice — once against the C++ engine, once against the oracle — and both must produce the identical frame sequences, messages and failures (`tests/test_isotp_vectors.py`). `tests/test_isotp.cpp` keeps the same protocol covered natively inside `ctest`.
+
 ## Extension and persistence
 
 One reserve container can be assigned to a JSON-imported ECU without exposing the Docker daemon. Adding more concurrent ECUs requires declaring additional worker services/endpoints. The application never silently hosts extra ECU tasks in the main container.

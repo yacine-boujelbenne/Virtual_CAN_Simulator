@@ -86,6 +86,45 @@ Can frameFrom(const Json &item) {
     Can frame(item.at("id"),item.at("data").get<std::vector<uint8_t>>());
     frame.setFrameType(item.value("extended",false));frame.setFd(item.value("fd",false),item.value("brs",false));return frame;
 }
+// ISO-TP session configuration shared by the ECU kernel and the diagnostic tester.
+IsoTpConfig isotpConfig(const Json &request) {
+    IsoTpConfig config;
+    config.txId=request.value("tx_id",0x7e0u);
+    config.rxId=request.value("rx_id",0x7e8u);
+    config.fd=request.value("fd",false);
+    config.linkLength=request.value("link_length",8u);
+    config.blockSize=request.value("block_size",8u);
+    config.stmin=request.value("stmin",0u);
+    config.extendedAddressing=request.value("extended",false);
+    config.sourceAddress=request.value("sa",0u);
+    config.targetAddress=request.value("ta",0u);
+    config.nAs=request.value("n_as",1000.0);
+    config.nBs=request.value("n_bs",1000.0);
+    config.nAr=request.value("n_ar",1000.0);
+    config.nCr=request.value("n_cr",1000.0);
+    return config;
+}
+Json isotpFrameJson(const IsoTpFrame &frame) {
+    return {{"id",frame.id},{"data",frame.data},{"extended",frame.id>0x7ff},{"fd",frame.fd},{"brs",frame.brs},
+        {"bus","diagnostics"},{"delay_us",frame.delayUs}};
+}
+IsoTpFrame isotpFrameFrom(const Json &item) {
+    check(item.at("data").is_array(),"Frame data must be an array");
+    for(auto &b:item.at("data"))check(b.is_number_integer()&&b.get<int64_t>()>=0&&b.get<uint64_t>()<=255,"Invalid frame byte");
+    IsoTpFrame frame;
+    frame.id=item.at("id").get<uint32_t>();
+    frame.data=item.at("data").get<std::vector<uint8_t>>();
+    frame.fd=item.value("fd",false);
+    frame.brs=item.value("brs",false);
+    return frame;
+}
+// Logical clock of a session: the simulation tick, or the time given by the caller.
+uint64_t isotpNow(const Json &request, uint64_t fallback) {
+    if (!request.contains("now_ms")) return fallback;
+    auto value=request.at("now_ms");
+    check(value.is_number_integer()&&value.get<int64_t>()>=0,"Invalid ISO-TP clock");
+    return value.get<uint64_t>();
+}
 std::string hexBytes(const std::vector<uint8_t> &bytes) {
     std::ostringstream out; out<<std::hex;
     for(auto b:bytes) {if(out.tellp()>0)out<<' ';out.width(2);out.fill('0');out<<unsigned(b);}return out.str();
@@ -200,6 +239,7 @@ void SimulationManager::reset() {
     ecus_.clear();monitor_=std::make_unique<CanBus>(CanBus::Backend::Internal,channel_);monitor_->init();
     tick_=frameCount_=frameBits_=frameSeq_=0;running_=false;random_.seed(42);
     frames_=Json::array();events_=Json::array();envelopes_=Json::array();actuations_=Json::array();scheduled_=Json::array();
+    testers_.clear();
     controls_={{"throttle",0},{"brake",0},{"ignition",1},{"ambient",25},{"road_friction",0.8},{"assist_enabled",0},{"target_speed",80},{"aeb_enabled",1},{"lead_speed",12}};
     world_={{"speed",0},{"acceleration",0},{"position",0},{"rpm",0},{"motor_temperature",30},{"battery_temperature",28},
         {"soc",85},{"voltage",390},{"current",0},{"wheel_fl",0},{"wheel_fr",0},{"wheel_rl",0},{"wheel_rr",0},
@@ -443,6 +483,38 @@ Json SimulationManager::diagnostic(const Json &request) {
     std::vector<uint8_t> result(payload.begin(),payload.end());
     return {{"request",hexBytes(bytes)},{"response",hexBytes(result)},{"bytes",result},{"transport","ISO-TP / internal CAN"},{"request_id",0x7e0},{"response_id",0x7e8}};
 }
+// Diagnostic tester endpoint: the ISO-TP session lives in the core, the controller only pumps frames.
+Json SimulationManager::isotpTester(const Json &request) {
+    auto action=request.value("action","");
+    auto session=request.at("session").get<std::string>();
+    if(action=="isotp_tester_start") {
+        check(testers_.size()<64,"ISO-TP session limit");
+        testers_[session]=std::make_unique<IsoTp>(isotpConfig(request));
+        return {{"ready",true}};
+    }
+    if(action=="isotp_tester_end") {testers_.erase(session);return {{"closed",true}};}
+    auto it=testers_.find(session);
+    check(it!=testers_.end(),"Unknown ISO-TP session");
+    auto &transport=*it->second;
+    auto now=isotpNow(request,tick_*stepMs_);
+    if(action=="isotp_tester_send") {
+        auto payload=request.at("bytes").get<std::vector<uint8_t>>();
+        check(!payload.empty()&&payload.size()<=4095,"Invalid ISO-TP payload");
+        Json frames=Json::array();
+        for(auto &frame:transport.startSend(payload,now))frames.push_back(isotpFrameJson(frame));
+        return {{"frames",frames}};
+    }
+    if(action=="isotp_tester_receive") {
+        auto frame=isotpFrameFrom(request.at("frame"));
+        Json frames=Json::array();
+        for(auto &out:transport.onFrame(frame,now))frames.push_back(isotpFrameJson(out));
+        Json message=nullptr;bool done=false;
+        if(transport.hasMessage()) {message=transport.takeMessage();done=true;}
+        return {{"frames",frames},{"message",message},{"done",done}};
+    }
+    if(action=="isotp_tester_poll") {transport.poll(now);return {{"ok",true}};}
+    throw std::invalid_argument("Unknown ISO-TP action");
+}
 Json SimulationManager::command(const Json &r) {
     auto action=r.value("action","snapshot");
     if(action=="snapshot")return snapshot();
@@ -513,6 +585,8 @@ Json SimulationManager::command(const Json &r) {
         }
         check(ecus_.size()<32,"ECU limit reached");loadEcu(d);
     } else if(action=="diagnostic")return diagnostic(r);
+    else if(action=="isotp_tester_start"||action=="isotp_tester_send"||action=="isotp_tester_receive"||
+            action=="isotp_tester_poll"||action=="isotp_tester_end")return isotpTester(r);
     else throw std::invalid_argument("Unknown action: "+action);
     return snapshot();
 }
@@ -523,6 +597,7 @@ EcuKernel::EcuKernel(Json definition,unsigned stepMs):definition_(std::move(defi
 }
 void EcuKernel::reset(uint64_t epoch) {
     epoch_=epoch;nextTick_=lastRxTick_=0;cached_=nullptr;values_.clear();active_.clear();stored_.clear();rxTicks_.clear();
+    sessions_.clear();responders_.clear();
     state_=definition_.at("state_machine").at("initial");
     for(auto &input:definition_.at("inputs"))values_[input.get<std::string>()]=0;
     for(auto &v:definition_.at("variables").items())values_[v.key()]=v.value().is_boolean()?(v.value().get<bool>()?1:0):v.value().get<double>();
@@ -630,6 +705,45 @@ Json EcuKernel::tick(const Json &request) {
         {"deadline_miss",false}};
     nextTick_++;cached_=result;return result;
 }
+Json EcuKernel::isotp(const Json &request) {
+    auto action=request.value("action","");
+    auto session=request.at("session").get<std::string>();
+    if(action=="isotp_start") {
+        check(sessions_.size()<64,"ISO-TP session limit");
+        sessions_[session]=std::make_unique<IsoTp>(isotpConfig(request));
+        responders_[session]=request.value("respond",false);
+        return {{"ready",true}};
+    }
+    if(action=="isotp_end") {sessions_.erase(session);responders_.erase(session);return {{"closed",true}};}
+    auto it=sessions_.find(session);
+    check(it!=sessions_.end(),"Unknown ISO-TP session");
+    auto &transport=*it->second;
+    auto now=isotpNow(request,clockMs());
+    if(action=="isotp_send") {
+        auto payload=request.at("bytes").get<std::vector<uint8_t>>();
+        check(!payload.empty()&&payload.size()<=4095,"Invalid ISO-TP payload");
+        Json frames=Json::array();
+        for(auto &frame:transport.startSend(payload,now))frames.push_back(isotpFrameJson(frame));
+        return {{"frames",frames}};
+    }
+    if(action=="isotp_frame") {
+        auto frame=isotpFrameFrom(request.at("frame"));
+        Json frames=Json::array();
+        for(auto &out:transport.onFrame(frame,now))frames.push_back(isotpFrameJson(out));
+        Json message=nullptr;bool done=false;
+        if(transport.hasMessage()) {
+            auto bytes=transport.takeMessage();
+            message=bytes;done=true;
+            if(responders_[session]) {
+                auto response=uds({{"bytes",bytes}}).at("bytes").get<std::vector<uint8_t>>();
+                for(auto &out:transport.startSend(response,now))frames.push_back(isotpFrameJson(out));
+            }
+        }
+        return {{"frames",frames},{"message",message},{"done",done}};
+    }
+    if(action=="isotp_poll") {transport.poll(now);return {{"ok",true}};}
+    throw std::invalid_argument("Unknown ISO-TP action");
+}
 Json EcuKernel::uds(const Json &request) {
     check(request.at("bytes").is_array()&&!request.at("bytes").empty(),"UDS bytes required");
     for(auto &v:request.at("bytes"))check(v.is_number_integer()&&v.get<int64_t>()>=0&&v.get<uint64_t>()<=255,"UDS byte outside 0..255");
@@ -668,6 +782,8 @@ Json EcuKernel::command(const Json &request) {
     if(action=="reset") {reset(request.value("epoch",epoch_+1));nextTick_=request.value("start_tick",0ULL);return snapshot();}
     if(action=="uds")return uds(request);
     if(action=="snapshot")return snapshot();
+    if(action=="isotp_start"||action=="isotp_send"||action=="isotp_frame"||action=="isotp_end"||action=="isotp_poll")
+        return isotp(request);
     throw std::invalid_argument("Unknown ECU kernel command");
 }
 // Envelope records follow resources/schemas/event-envelope.v2.json; retention matches the frame ring (200).
