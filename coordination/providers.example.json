@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "integration_branch": "work/native-cpp",
+  "lease_seconds": 180,
+  "provider_cooldown_seconds": 900,
+  "check_timeout_seconds": 600,
+  "max_attempts_per_task": 4,
+  "dispatch_order": [
+    "codex",
+    "opencode",
+    "copilot"
+  ],
+  "providers": {
+    "opencode": {
+      "enabled": false,
+      "verified_local": false,
+      "mode": "cli",
+      "capabilities": [
+        "ci",
+        "contracts",
+        "control",
+        "cpp",
+        "docs",
+        "resources",
+        "review",
+        "runtime",
+        "tests",
+        "ui",
+        "world"
+      ],
+      "command": [
+        "opencode",
+        "run",
+        "--agent",
+        "ecu-core",
+        "--format",
+        "json",
+        "{prompt}"
+      ],
+      "timeout_seconds": 900
+    },
+    "copilot": {
+      "enabled": false,
+      "verified_local": false,
+      "mode": "manual",
+      "capabilities": [
+        "contracts",
+        "cpp",
+        "docs",
+        "review",
+        "tests",
+        "ui"
+      ],
+      "command": [
+        "copilot",
+        "-p",
+        "{prompt}",
+        "--allow-tool=read",
+        "--allow-tool=write"
+      ],
+      "timeout_seconds": 600
+    },
+    "codex": {
+      "enabled": false,
+      "verified_local": false,
+      "mode": "cli",
+      "capabilities": [
+        "ci",
+        "contracts",
+        "control",
+        "cpp",
+        "docs",
+        "resources",
+        "review",
+        "runtime",
+        "tests",
+        "ui",
+        "world"
+      ],
+      "command": [
+        "codex",
+        "exec",
+        "--sandbox",
+        "workspace-write",
+        "{prompt}"
+      ],
+      "timeout_seconds": 900
+    }
+  },
+  "notes": [
+    "Choose installed model/account defaults deliberately; no quota or model-strength assumption.",
+    "Enable a CLI only after login/version/permission checks and setting verified_local=true.",
+    "Copilot VS Code mode is manual. To automate, install/authenticate its separate CLI and select mode=cli.",
+    "OpenCode permission prompts or Codex sandbox failures are blockers; do not use universal bypass flags."
+  ]
+}

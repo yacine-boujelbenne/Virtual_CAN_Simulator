@@ -1,0 +1,1103 @@
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "id": "BASE-00",
+      "title": "Reconcile local checkpoint source and preserve a baseline SHA",
+      "depends_on": [],
+      "capabilities": [
+        "contracts"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "coordination/reports/baseline.md"
+      ],
+      "acceptance": [
+        "Identify the real local P0 source commit; preserve dirty work without reset/overwrite.",
+        "All P0 marker files exist; report source mismatch and provenance.",
+        "BLOCK rather than reconstruct missing P0 from an older remote."
+      ],
+      "checks": [
+        [
+          "python3",
+          "tools/check_baseline.py",
+          "--verify-p0"
+        ]
+      ],
+      "priority": 0
+    },
+    {
+      "id": "PLAN-00",
+      "title": "Freeze the native C++ / world / clock interface ADR",
+      "depends_on": [],
+      "capabilities": [
+        "contracts"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode",
+        "copilot"
+      ],
+      "write_scopes": [
+        "coordination/decisions/ADR-001.md"
+      ],
+      "acceptance": [
+        "Define typed SI units, one clock/ego authority and baseline compatibility.",
+        "Select esmini-first and the optional CARLA replacement-physics profile.",
+        "No runtime implementation claim; preserve source reconciliation blocker."
+      ],
+      "checks": [
+        [
+          "python3",
+          "tools/validate_coordination.py"
+        ]
+      ],
+      "priority": 1
+    },
+    {
+      "id": "BASE-01",
+      "title": "Prove genuine CMake/GTest/CTest and P0 regression",
+      "depends_on": [
+        "BASE-00"
+      ],
+      "capabilities": [
+        "ci"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex"
+      ],
+      "write_scopes": [
+        "CMakeLists.txt",
+        ".github/workflows/",
+        "tests/",
+        "coordination/reports/build-baseline.md"
+      ],
+      "acceptance": [
+        "No gtest shim in acceptance.",
+        "Run named P0/vector/A-B tests with no unreported skips.",
+        "Report Docker as passed only on a host actually running the worker stop/recovery test."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ],
+        [
+          "python3",
+          "tools/check_baseline.py",
+          "--verify-p0"
+        ]
+      ],
+      "priority": 2
+    },
+    {
+      "id": "CORE-00",
+      "title": "Extract stable C++ application/core facades without behavior change",
+      "depends_on": [
+        "BASE-01",
+        "PLAN-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/core/",
+        "headers/",
+        "src/",
+        "tests/native/",
+        "CMakeLists.txt"
+      ],
+      "acceptance": [
+        "Existing P0 project/hash/frame/envelope behavior unchanged.",
+        "Expose typed commands, snapshots, jobs, WorldFrame and RunRecorder seams."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 10
+    },
+    {
+      "id": "CORE-01",
+      "title": "Port controller/barrier and worker HTTP dispatch to C++",
+      "depends_on": [
+        "CORE-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/transport/",
+        "native/core/",
+        "app/",
+        "CMakeLists.txt",
+        "Dockerfile",
+        "compose.yaml",
+        "tests/native/"
+      ],
+      "acceptance": [
+        "One worker/container per ECU with unchanged epoch/retry contract.",
+        "C++ native transport handles remote diagnostics; Python stays transitional.",
+        "No hidden main-process ECU fallback."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 11
+    },
+    {
+      "id": "CORE-02",
+      "title": "Ship headless C++ project/run CLI and native worker entrypoints",
+      "depends_on": [
+        "CORE-01"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/",
+        "app/",
+        "CMakeLists.txt",
+        "Dockerfile",
+        "compose.yaml",
+        "tests/native/"
+      ],
+      "acceptance": [
+        "A project runs without a Python production process.",
+        "Project import/export and diagnostic parity demonstrated.",
+        "Keep legacy launchers available as comparison."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 12
+    },
+    {
+      "id": "TIME-00",
+      "title": "Fix acquisition age and cross-tick resource job semantics",
+      "depends_on": [
+        "CORE-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "resources"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/core/",
+        "headers/",
+        "src/",
+        "resources/schemas/",
+        "tests/native/",
+        "tests/test_envelopes.py"
+      ],
+      "acceptance": [
+        "Delayed old packets retain acquisition age.",
+        "Cross-tick jobs cannot publish early or mutate a retried tick.",
+        "Slow CPU, RAM/queue limits, watchdog and stale/old-epoch tests."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 13
+    },
+    {
+      "id": "PLANT-00",
+      "title": "Add lateral pose, EPS and meaningful EV P/N/D control",
+      "depends_on": [
+        "CORE-02",
+        "TIME-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "control"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/core/",
+        "native/control/",
+        "headers/",
+        "src/",
+        "resources/ecu_templates/",
+        "resources/scenarios/",
+        "tests/native/"
+      ],
+      "acceptance": [
+        "Steering changes heading and lateral position through EPS.",
+        "Motor/ABS ownership and braking inhibit remain.",
+        "P/N/D is functional; unsupported reverse is rejected."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 20
+    },
+    {
+      "id": "LOG-00",
+      "title": "Implement durable C++ experiment recorder and integrity status",
+      "depends_on": [
+        "CORE-02",
+        "TIME-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/recording/",
+        "native/core/",
+        "tests/native/"
+      ],
+      "acceptance": [
+        "Append full-run events/CAN/trajectory/control/performance plus manifest.",
+        "Bounded queue saturation marks integrity failure, never silent success.",
+        "Crash/partial and clean close are distinguishable."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 21
+    },
+    {
+      "id": "PROJECT-00",
+      "title": "Native New/Open/Save with v1-compatible extensions",
+      "depends_on": [
+        "CORE-02",
+        "PLAN-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/core/",
+        "resources/",
+        "tests/native/",
+        "tests/test_project_ab.py"
+      ],
+      "acceptance": [
+        "Keep actual JSON v1 canonical hash fixture.",
+        "New Empty/Driving project; persisted controller/resource/world configuration.",
+        "Invalid import leaves active configuration intact."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 22
+    },
+    {
+      "id": "UI-00",
+      "title": "Qt C++ desktop shell against the frozen interface",
+      "depends_on": [
+        "CORE-00"
+      ],
+      "capabilities": [
+        "ui"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "copilot"
+      ],
+      "write_scopes": [
+        "native/ui/",
+        "tests/native/ui/"
+      ],
+      "acceptance": [
+        "Native Qt window with snapshot/command bridge.",
+        "Label fixture mode and keep UI thread free of physics.",
+        "Optional build isolates Qt from headless tests."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 23
+    },
+    {
+      "id": "WORLD-00",
+      "title": "Bounded esmini external-ego/fixed-step capability spike",
+      "depends_on": [
+        "BASE-01",
+        "PLAN-00"
+      ],
+      "capabilities": [
+        "world"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/world/",
+        "tests/native/world/",
+        "coordination/reports/esmini-spike.md"
+      ],
+      "acceptance": [
+        "Pin backend version and validate library/tool availability.",
+        "One externally controlled ego with known coordinates and step order.",
+        "Report a real viewer run separately from headless stubs."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 24
+    },
+    {
+      "id": "TRACK-00",
+      "title": "Deterministic baseline path/speed tracker via ECU/CAN",
+      "depends_on": [
+        "PLANT-00",
+        "LOG-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "control"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/control/",
+        "resources/scenarios/",
+        "resources/ecu_templates/",
+        "tests/native/control/"
+      ],
+      "acceptance": [
+        "Straight/circle/lane-change references.",
+        "No direct pose teleportation or truth-to-controller bypass.",
+        "Commit experiment metrics/limits before comparing MPC."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 30
+    },
+    {
+      "id": "WORLD-01",
+      "title": "Connect esmini roads/actors/viewer to native loop",
+      "depends_on": [
+        "WORLD-00",
+        "PLANT-00",
+        "LOG-00"
+      ],
+      "capabilities": [
+        "world",
+        "cpp"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/world/",
+        "native/core/",
+        "tests/native/world/",
+        "resources/scenarios/"
+      ],
+      "acceptance": [
+        "Exactly one ego plant and one backend step per tick.",
+        "Synchronized reset and pose mapping.",
+        "Durable experiment log from actual 3D run."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 31
+    },
+    {
+      "id": "UI-01",
+      "title": "Wire native driver/project/topology/performance panels",
+      "depends_on": [
+        "UI-00",
+        "PLANT-00",
+        "PROJECT-00",
+        "LOG-00"
+      ],
+      "capabilities": [
+        "ui"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "copilot"
+      ],
+      "write_scopes": [
+        "native/ui/",
+        "tests/native/ui/"
+      ],
+      "acceptance": [
+        "Controls traverse DriverDemand/ECUs.",
+        "Show validity/age, resource versus host metrics and run files.",
+        "New/Open/Save delegates to C++ services."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 32
+    },
+    {
+      "id": "MPC-00",
+      "title": "Implement constrained C++ MPC with maintained QP solver",
+      "depends_on": [
+        "TRACK-00",
+        "TIME-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "control"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/control/",
+        "tests/native/control/",
+        "coordination/reports/mpc-derivation.md"
+      ],
+      "acceptance": [
+        "Re-derived units/model; no copied MATLAB solver.",
+        "Bounds/rates/solver failure/time-budget/fallback tests.",
+        "Compare same hashed scenario with baseline and failed cases."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 33
+    },
+    {
+      "id": "VERIFY-00",
+      "title": "Native container/headless parity and failure CI",
+      "depends_on": [
+        "CORE-02",
+        "PROJECT-00",
+        "LOG-00"
+      ],
+      "capabilities": [
+        "ci"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex"
+      ],
+      "write_scopes": [
+        ".github/workflows/",
+        "tests/",
+        "coordination/reports/native-parity.md"
+      ],
+      "acceptance": [
+        "Genuine native CTest, project A/B and ISO-TP oracle vectors.",
+        "Kill ECU versus coach paths and reset/retry behavior.",
+        "No skipped backend test counted passed."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 34
+    },
+    {
+      "id": "REPLAY-00",
+      "title": "Deterministic core replay and crash/restart evidence",
+      "depends_on": [
+        "LOG-00",
+        "PROJECT-00",
+        "VERIFY-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "tests"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "native/recording/",
+        "native/core/",
+        "tests/native/"
+      ],
+      "acceptance": [
+        "Replay source versus truth/observed signals explicitly.",
+        "Project/profile/controller identifiers match.",
+        "State exactly which backend physics is deterministic."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 40
+    },
+    {
+      "id": "DEMO-00",
+      "title": "Native 3D driving experiment and release report",
+      "depends_on": [
+        "WORLD-01",
+        "UI-01",
+        "MPC-00",
+        "VERIFY-00",
+        "REPLAY-00"
+      ],
+      "capabilities": [
+        "tests"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "copilot",
+        "opencode"
+      ],
+      "write_scopes": [
+        "coordination/reports/native-3d-demo.md",
+        "tests/native/"
+      ],
+      "acceptance": [
+        "Native app drives virtual car with ECU topology and logs.",
+        "Include scenario hash, build/backend versions, failures and visual evidence.",
+        "No fabricated hardware calibration or 3D results."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 50
+    },
+    {
+      "id": "WEB-00",
+      "title": "Retain optional web adapter over native commands",
+      "depends_on": [
+        "DEMO-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/transport/",
+        "web/",
+        "app/server.py",
+        "tests/"
+      ],
+      "acceptance": [
+        "Web uses same native service; no second clock/controller.",
+        "Keep inspection/demo without making browser production entrypoint."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 60
+    },
+    {
+      "id": "CLEAN-00",
+      "title": "Review and remove only proven duplicate production paths",
+      "depends_on": [
+        "DEMO-00",
+        "WEB-00"
+      ],
+      "capabilities": [
+        "tests"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "app/",
+        "CMakeLists.txt",
+        "Dockerfile",
+        "compose.yaml",
+        "coordination/reports/cleanup.md"
+      ],
+      "acceptance": [
+        "Explicit before/after caller/build evidence.",
+        "Retain Python oracle/tests, assets, notices and user data.",
+        "No blanket deletion, reset, clean or format replacement."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 70
+    },
+    {
+      "id": "CARLA-00",
+      "title": "Optional later CARLA capability/authority ADR",
+      "depends_on": [
+        "DEMO-00"
+      ],
+      "capabilities": [
+        "world"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "coordination/decisions/ADR-CARLA.md",
+        "native/world/carla/"
+      ],
+      "acceptance": [
+        "Separate physics-authoritative backend.",
+        "Hardware/version/clock and coordinate requirements evidenced.",
+        "Do not block the esmini native release."
+      ],
+      "checks": [
+        [
+          "python3",
+          "tools/validate_coordination.py"
+        ]
+      ],
+      "priority": 90
+    }
+  ]
+}
