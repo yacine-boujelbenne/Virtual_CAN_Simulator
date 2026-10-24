@@ -1,5 +1,7 @@
 # Target: a native C++ application with a virtual vehicle
 
+Supplemental reference review: [TI ADAS communications and official CarSim](REFERENCE_ADAS_CARSIM.md). It clarifies future sensor/data links and the optional direct C/C++ CarSim SDK path; the architecture and current task priorities remain unchanged.
+
 ## Executables and boundaries
 
 | Component | Target responsibility |

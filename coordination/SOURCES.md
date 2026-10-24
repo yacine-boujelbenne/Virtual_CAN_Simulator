@@ -1,5 +1,7 @@
 # Sources and provenance
 
+Additional review on 24 October: [TI SLYY219A and official CarSim integration](REFERENCE_ADAS_CARSIM.md). The attached TI publication is reference material; it is not copied into the repository. Official SDK, FMI, sensor-licence and Unreal links are recorded in that review.
+
 Inspected 24 October 2026. Product recommendations and provider lane assignments are this pack's design choices. CLI flags, account limits and backend APIs must be verified against the installed versions before enabling automation. No provider/model performance benchmark was performed.
 
 - User CHECKPOINT: `sources/USER_CHECKPOINT.md`, SHA-256 `1a167ac72cd005c1f81a6c3ce0f70d971043abb6ed6536cbe2d81b3decb9c57f`.
