@@ -1,0 +1,33 @@
+name: Verify native memory and undefined behavior safety
+on:
+  push:
+    branches: [feature, master, main]
+  pull_request:
+jobs:
+  sanitizers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install sanitizer build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ make libgtest-dev
+      - name: Configure ASan and UBSan native profile
+        run: cmake -S . -B build/sanitize -DCMAKE_BUILD_TYPE=RelWithDebInfo -DVEHICLE_LAB_P0_TESTS=ON -DVEHICLE_LAB_SANITIZERS=ON
+      - name: Build sanitizer-instrumented targets
+        run: cmake --build build/sanitize -j2
+      - name: Run all registered native tests under ASan and UBSan
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          LSAN_OPTIONS: report_objects=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build/sanitize --output-on-failure --no-tests=error
+      - name: Save sanitizer test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanitizer-ctest-results
+          path: build/sanitize/Testing/

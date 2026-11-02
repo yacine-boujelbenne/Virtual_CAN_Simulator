@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "name": "EPS ECU",
+  "inputs": [
+    "ignition",
+    "steering",
+    "speed_sensor"
+  ],
+  "variables": {
+    "steering_angle": 0,
+    "steering_command": 0
+  },
+  "tasks": [
+    {
+      "name": "measure",
+      "period_ms": 10,
+      "cost_us": 80,
+      "assign": {
+        "steering_command": "steering"
+      }
+    },
+    {
+      "name": "assist",
+      "period_ms": 10,
+      "cost_us": 120,
+      "assign": {
+        "steering_angle": {
+          "op": "if",
+          "args": [
+            "ignition",
+            {
+              "op": "min",
+              "args": [
+                {
+                  "op": "max",
+                  "args": [
+                    {
+                      "op": "mul",
+                      "args": [
+                        "steering_command",
+                        0.6
+                      ]
+                    },
+                    -0.6
+                  ]
+                },
+                0.6
+              ]
+            },
+            0
+          ]
+        }
+      }
+    }
+  ],
+  "bindings": {
+    "steering_angle": "steering_angle"
+  },
+  "messages": [
+    {
+      "name": "EPSStatus",
+      "id": 610,
+      "dlc": 8,
+      "direction": "tx",
+      "signals": [
+        {
+          "name": "steering_angle",
+          "start": 0,
+          "length": 16,
+          "factor": 0.0001,
+          "offset": 0,
+          "min": -1,
+          "max": 1,
+          "unit": "rad",
+          "signed": true,
+          "byte_order": "little_endian"
+        }
+      ],
+      "period_ms": 20,
+      "bus": "powertrain",
+      "fd": false,
+      "brs": false
+    }
+  ],
+  "state_machine": {
+    "initial": "OFF",
+    "states": [
+      "OFF",
+      "RUN"
+    ],
+    "transitions": [
+      {
+        "from": "OFF",
+        "to": "RUN",
+        "when": "ignition"
+      },
+      {
+        "from": "RUN",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "dtcs": [],
+  "assumptions": [
+    "Generic educational EPS model; not an OEM controller.",
+    "Road-wheel angle follows the normalized driver request with a fixed 0.6 rad limit.",
+    "The assist limit is the EPS actuator capability, not the plant steering limit; when the scenario plant max_steer_angle_rad is lower, the world reports the saturated angle the kinematic bicycle actually used."
+  ],
+  "hardware": {
+    "cpu_mhz": 120,
+    "ram_kib": 128,
+    "flash_kib": 512,
+    "task_budget_us": 8000,
+    "adc": {
+      "resolution_bits": 12,
+      "channels": {}
+    },
+    "can_controller": {
+      "fd_capable": true,
+      "rx_fifo_frames": 128
+    },
+    "gpio_outputs": []
+  },
+  "domain": "Chassis"
+}

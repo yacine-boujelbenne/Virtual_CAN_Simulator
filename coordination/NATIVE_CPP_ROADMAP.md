@@ -1,5 +1,15 @@
 # Escalation roadmap: preserve, extract, extend, demonstrate
 
+Current delivery (3 November 2026): native controller/workers, Qt desktop,
+interactive traffic/following, live health, project switching and custom car meshes
+are verified. See [CURRENT_STATE.md](CURRENT_STATE.md) and
+[../docs/PLATFORM_STATUS.md](../docs/PLATFORM_STATUS.md). G0–G3 have native evidence;
+G4 has pose/controls and sampled telemetry, with full runtime recording open.
+The Qt software 3D view is delivered; the external esmini G6 gate remains open.
+Tracking/MPC, full replay, container release and portable installation remain
+future gates. The historical gate criteria below are preserved.
+
+
 There is no honest new calendar deadline until the reported P0 source is recovered and built. Milestones are gated; tasks.json gives the smaller independently reviewable slices. Multiple providers may work on non-conflicting ready tasks, but dependent interfaces cannot be guessed.
 
 | Gate | Required result | Exit evidence |

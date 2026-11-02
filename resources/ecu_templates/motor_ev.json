@@ -1,0 +1,443 @@
+{
+  "schema_version": 1,
+  "name": "Motor ECU",
+  "inputs": [
+    "ignition",
+    "throttle",
+    "drive_permit",
+    "rpm_sensor",
+    "temperature_sensor",
+    "power_permit",
+    "battery_soc",
+    "pack_voltage",
+    "pack_current",
+    "battery_fault",
+    "aeb_request",
+    "acc_throttle",
+    "acc_active",
+    "fcw",
+    "time_to_collision"
+  ],
+  "variables": {
+    "motor_rpm": 0,
+    "motor_temperature": 30,
+    "motor_torque": 0,
+    "motor_fault": 0,
+    "fan_cmd": 0
+  },
+  "tasks": [
+    {
+      "name": "measure",
+      "period_ms": 10,
+      "assign": {
+        "motor_rpm": "rpm_sensor",
+        "motor_temperature": "temperature_sensor",
+        "motor_fault": {
+          "op": "gt",
+          "args": [
+            "temperature_sensor",
+            115
+          ]
+        }
+      }
+    },
+    {
+      "name": "control",
+      "period_ms": 10,
+      "assign": {
+        "motor_torque": {
+          "op": "mul",
+          "args": [
+            {
+              "op": "if",
+              "args": [
+                "aeb_request",
+                0,
+                {
+                  "op": "if",
+                  "args": [
+                    {
+                      "op": "and",
+                      "args": [
+                        "ignition",
+                        {
+                          "op": "eq",
+                          "args": [
+                            "motor_fault",
+                            0
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "op": "mul",
+                          "args": [
+                            {
+                              "op": "if",
+                              "args": [
+                                "acc_active",
+                                "acc_throttle",
+                                "throttle"
+                              ]
+                            },
+                            320
+                          ]
+                        },
+                        "power_permit"
+                      ]
+                    },
+                    0
+                  ]
+                }
+              ]
+            },
+            "drive_permit"
+          ]
+        },
+        "fan_cmd": {
+          "op": "gt",
+          "args": [
+            "motor_temperature",
+            90
+          ]
+        }
+      }
+    }
+  ],
+  "bindings": {
+    "torque_request": "motor_torque",
+    "fan": "fan_cmd"
+  },
+  "messages": [
+    {
+      "name": "MotorStatus",
+      "id": 256,
+      "dlc": 8,
+      "direction": "tx",
+      "signals": [
+        {
+          "name": "motor_rpm",
+          "start": 0,
+          "length": 16,
+          "factor": 0.25,
+          "offset": 0,
+          "min": 0,
+          "max": 16000,
+          "unit": "rpm",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "motor_temperature",
+          "start": 16,
+          "length": 16,
+          "factor": 0.01,
+          "offset": -40,
+          "min": -40,
+          "max": 150,
+          "unit": "\u00b0C",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "motor_torque",
+          "start": 32,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 320,
+          "unit": "Nm",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "motor_fault",
+          "start": 48,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ],
+      "period_ms": 20,
+      "bus": "powertrain",
+      "fd": false,
+      "brs": false
+    },
+    {
+      "name": "BatteryStatus",
+      "id": 784,
+      "dlc": 8,
+      "direction": "rx",
+      "signals": [
+        {
+          "name": "battery_soc",
+          "start": 0,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "pack_voltage",
+          "start": 16,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "V",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "pack_current",
+          "start": 32,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": -300,
+          "max": 300,
+          "unit": "A",
+          "signed": true,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "battery_fault",
+          "start": 48,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "power_permit",
+          "start": 49,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ],
+      "bus": "powertrain",
+      "fd": false,
+      "brs": false
+    },
+    {
+      "name": "ADASControl",
+      "id": 1104,
+      "direction": "rx",
+      "dlc": 8,
+      "fd": false,
+      "brs": false,
+      "bus": "powertrain",
+      "signals": [
+        {
+          "name": "aeb_request",
+          "start": 0,
+          "length": 16,
+          "factor": 0.0001,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "acc_throttle",
+          "start": 16,
+          "length": 16,
+          "factor": 0.0001,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "acc_active",
+          "start": 32,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "fcw",
+          "start": 33,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "time_to_collision",
+          "start": 40,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 99,
+          "unit": "s",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ]
+    },
+    {
+      "name": "DriveStatus",
+      "id": 608,
+      "direction": "rx",
+      "dlc": 8,
+      "fd": false,
+      "brs": false,
+      "bus": "powertrain",
+      "signals": [
+        {
+          "name": "drive_permit",
+          "start": 0,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ]
+    }
+  ],
+  "state_machine": {
+    "initial": "OFF",
+    "states": [
+      "OFF",
+      "RUN",
+      "FAULT"
+    ],
+    "transitions": [
+      {
+        "from": "OFF",
+        "to": "RUN",
+        "when": "ignition"
+      },
+      {
+        "from": "RUN",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      },
+      {
+        "from": "RUN",
+        "to": "FAULT",
+        "when": "motor_fault"
+      },
+      {
+        "from": "FAULT",
+        "to": "RUN",
+        "when": {
+          "op": "eq",
+          "args": [
+            "motor_fault",
+            0
+          ]
+        }
+      },
+      {
+        "from": "FAULT",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "dtcs": [
+    {
+      "code": "P0217",
+      "uds_code": 136960,
+      "name": "Motor overtemperature",
+      "severity": "critical",
+      "trigger": {
+        "op": "gt",
+        "args": [
+          "motor_temperature",
+          115
+        ]
+      },
+      "recover": {
+        "op": "lt",
+        "args": [
+          "motor_temperature",
+          105
+        ]
+      }
+    }
+  ],
+  "assumptions": [
+    "Generic educational model; not an OEM controller.",
+    "Classic CAN, little-endian signals, 10 ms simulation step."
+  ],
+  "hardware": {
+    "cpu_mhz": 120,
+    "ram_kib": 128,
+    "flash_kib": 512,
+    "task_budget_us": 8000,
+    "adc": {
+      "resolution_bits": 12,
+      "channels": {
+        "temperature_sensor": [
+          -40,
+          150
+        ]
+      }
+    },
+    "can_controller": {
+      "fd_capable": true,
+      "rx_fifo_frames": 128
+    },
+    "gpio_outputs": [
+      "fan_cmd"
+    ]
+  },
+  "domain": "Powertrain"
+}

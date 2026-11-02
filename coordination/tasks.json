@@ -1098,6 +1098,688 @@
         ]
       ],
       "priority": 90
+    },
+    {
+      "id": "TOOLCHAIN-00",
+      "title": "Make native GoogleTest builds reproducible on clean hosts",
+      "depends_on": [
+        "BASE-01"
+      ],
+      "capabilities": [
+        "ci"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "CMakeLists.txt",
+        "tools/",
+        "docs/NATIVE_BUILD.md",
+        ".github/workflows/",
+        "coordination/reports/toolchain.md"
+      ],
+      "acceptance": [
+        "A clean checkout with no system GTest and no user CMake package registry entry configures and runs CTest without sudo or manual environment variables.",
+        "Any fetched dependency is version- and SHA-256-pinned; no unchecked download or vendored binary is committed.",
+        "Offline or blocked-network configure fails with a clear remediation message or uses an explicitly supplied local prefix.",
+        "Docs and CI use the same mechanism; existing Release behavior remains the default."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 3
+    },
+    {
+      "id": "SANITIZE-00",
+      "title": "Add opt-in Address/UndefinedBehavior sanitizer native regression profile",
+      "depends_on": [
+        "BASE-01"
+      ],
+      "capabilities": [
+        "ci",
+        "tests"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "CMakeLists.txt",
+        ".github/workflows/",
+        "coordination/reports/sanitizers.md"
+      ],
+      "acceptance": [
+        "Opt-in CMake profile enables AddressSanitizer and UndefinedBehaviorSanitizer for existing native targets without changing default Release flags.",
+        "All existing native CTest cases pass under the sanitizer profile, or every pre-existing finding is documented with evidence and not hidden.",
+        "CI runs a dedicated sanitizer job; a skipped or failed job is never reported as passed.",
+        "No simulation behavior, timestamp or protocol semantics change."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 4
+    },
+    {
+      "id": "WORLD-02",
+      "title": "Define typed IWorldBackend and deterministic null backend",
+      "depends_on": [
+        "PLAN-00",
+        "CORE-00",
+        "WORLD-00"
+      ],
+      "capabilities": [
+        "world",
+        "cpp"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "native/world/",
+        "tests/native/world/",
+        "coordination/decisions/ADR-002.md"
+      ],
+      "acceptance": [
+        "Typed IWorldBackend covers initialize/step/reset/read with exactly one backend step per explicit call.",
+        "A deterministic null backend provides declared non-ego motion and reset without esmini, Qt, GPU or network.",
+        "Units, axes and heading conventions match ADR-001 and record how a future esmini adapter maps them.",
+        "Headless tests prove one-step-per-call, reset synchronization and no renderer-driven time."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 8
+    },
+    {
+      "id": "CLI-IO-00",
+      "title": "Bound native JSON-line input before allocating a complete line",
+      "depends_on": [
+        "CORE-02"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "app/native_main.cpp",
+        "app/native_worker.cpp",
+        "native/transport/LineReader.hpp",
+        "tests/cli_io/"
+      ],
+      "acceptance": [
+        "Read native stdin incrementally with a bounded buffer and enforce the existing 2000000-byte limit before accumulating an arbitrarily long line.",
+        "Define and test rejection/recovery for oversized terminated and unterminated records, exact-limit records, EOF and malformed JSON; valid subsequent requests must have an explicit supported behavior.",
+        "Normal controller/worker replies, project hashes, epoch/retry semantics and process isolation remain unchanged."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DVEHICLE_LAB_P0_TESTS=ON"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure",
+          "--no-tests=error"
+        ],
+        [
+          "python3",
+          "tests/cli_io/test_bounded_input.py",
+          "build/native/vclab",
+          "build/native/vclab_worker"
+        ]
+      ],
+      "priority": 15
+    },
+    {
+      "id": "CONTAINER-NATIVE-00",
+      "title": "Run native worker containers against the C++ controller in a dedicated smoke gate",
+      "depends_on": [
+        "CORE-02",
+        "BASE-01"
+      ],
+      "capabilities": [
+        "ci",
+        "tests"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "compose.native-workers.yaml",
+        ".github/workflows/native-workers.yml",
+        "tests/native_container/"
+      ],
+      "acceptance": [
+        "Use existing Dockerfile native-ecu target for seven dedicated ECU workers and the existing C++ vclab as host-side controller; do not require Python inside production containers.",
+        "Use a separate Compose project, wait for real /health readiness, verify distinct container identities and native commands, and compare baseline 60-tick world/frame/envelope/project signatures against native-process mode.",
+        "Stop one actual worker, require an explicit failed tick with no main-process fallback, restart and reset, and verify epoch recovery; preserve original compose.yaml.",
+        "Collect logs and exact versions; missing Docker/daemon permission is a failed or unavailable execution gate and is never counted as a passed container run. This smoke gate precedes the later durable-log VERIFY-00 task."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DVEHICLE_LAB_P0_TESTS=ON"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure",
+          "--no-tests=error"
+        ],
+        [
+          "docker",
+          "compose",
+          "-f",
+          "compose.native-workers.yaml",
+          "config",
+          "--quiet"
+        ],
+        [
+          "python3",
+          "tests/native_container/run_smoke.py",
+          "--controller",
+          "build/native/vclab",
+          "--compose",
+          "compose.native-workers.yaml"
+        ]
+      ],
+      "priority": 16
+    },
+    {
+      "id": "PACKAGE-00",
+      "title": "Install native runtime resources and resolve them independently of working directory",
+      "depends_on": [
+        "CORE-02"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "CMakeLists.txt",
+        "app/native_main.cpp",
+        "native/runtime/ResourcePaths.hpp",
+        "tests/installation/"
+      ],
+      "acceptance": [
+        "Install default scenario and all referenced ECU definitions with native binaries into a declared data directory; preserve explicit --scenario precedence.",
+        "Resolve default resources from supported build/install locations rather than the caller working directory; define relocation behavior and test it.",
+        "From an unrelated temporary working directory, an installed vclab runs --steps 0 and a saved v1 project with adjacent installed vclab_worker; no source-tree paths or Python production controller are required.",
+        "Missing data produces a clear error; unchanged default scenario content and canonical hash are regression gates."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DVEHICLE_LAB_P0_TESTS=ON"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure",
+          "--no-tests=error"
+        ],
+        [
+          "python3",
+          "tests/installation/test_install.py",
+          "--build",
+          "build/native"
+        ]
+      ],
+      "priority": 17
+    },
+    {
+      "id": "UI-BOOT-00",
+      "title": "Create an actual optional Qt desktop executable before full panel integration",
+      "depends_on": [
+        "UI-00",
+        "CORE-02"
+      ],
+      "capabilities": [
+        "cpp",
+        "ui"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "CMakeLists.txt",
+        "app/desktop_main.cpp",
+        "native/ui/qt/",
+        "tests/desktop/"
+      ],
+      "acceptance": [
+        "An explicit build option creates a Qt QApplication and visible native main window; the existing fixture remains labelled and does not claim live driving integration.",
+        "Headless configuration/build continues without Qt; explicitly enabling the desktop fails clearly if required Qt development libraries are unavailable.",
+        "Keep command work off the Qt event thread and test window responsiveness/clean shutdown with a slow fixture bridge; defer production plant/project/log panels to existing UI-01.",
+        "Use Qt offscreen tests for automation and separately report a real visible-window run; fixtures/offscreen tests do not establish 3D or driving correctness."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DVEHICLE_LAB_P0_TESTS=ON"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure",
+          "--no-tests=error"
+        ],
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/desktop",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DVEHICLE_LAB_DESKTOP=ON"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/desktop",
+          "-j2"
+        ],
+        [
+          "python3",
+          "tests/desktop/test_shell.py",
+          "--build",
+          "build/desktop"
+        ]
+      ],
+      "priority": 18
+    },
+    {
+      "id": "IMPORT-ATOMIC-00",
+      "title": "Preserve the embedded core runtime after rejected scenario imports",
+      "depends_on": [
+        "CORE-02"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "src/SimulationManager.cpp",
+        "headers/SimulationManager.hpp",
+        "tests/project_import/"
+      ],
+      "acceptance": [
+        "An invalid sensor/source, initial state, topology, wire layout or policy with a correctly recomputed hash is rejected before altering the active epoch, tick, controls, world, queues, ECU state, metrics or random state.",
+        "Reproduce failure after nonzero ticks/nondefault controls and compare the complete before/after snapshot; next valid step must agree with an untouched reference run.",
+        "Successful v1 import, default canonical hash, retry/epoch fencing and native Controller prevalidation behavior retain their accepted contracts."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DVEHICLE_LAB_P0_TESTS=ON"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure",
+          "--no-tests=error"
+        ],
+        [
+          "python3",
+          "tests/project_import/test_transaction.py",
+          "build/native/vehicle_sim"
+        ]
+      ],
+      "priority": 14
+    },
+    {
+      "id": "DIAG-00",
+      "title": "Unify embedded and distributed diagnostic request/response shapes",
+      "depends_on": [
+        "CORE-02"
+      ],
+      "capabilities": [
+        "cpp",
+        "runtime"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "opencode",
+        "codex"
+      ],
+      "write_scopes": [
+        "headers/",
+        "src/",
+        "native/core/",
+        "native/runtime/",
+        "tests/native/"
+      ],
+      "acceptance": [
+        "Document the current embedded versus distributed diagnostic response shapes and choose one canonical contract or an explicit compatibility mode.",
+        "Native and legacy paths return equivalent correlated fields for success, unknown DID, malformed length and transport failure.",
+        "Tests cover CAN and CAN FD links and never advance the simulation clock.",
+        "No Python oracle or protocol vector is weakened to hide a shape difference."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure"
+        ]
+      ],
+      "priority": 12
+    },
+    {
+      "id": "LICENSE-00",
+      "title": "Record third-party licenses and release constraints for native assets",
+      "depends_on": [
+        "BASE-01",
+        "WORLD-00"
+      ],
+      "capabilities": [
+        "docs"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "NOTICE",
+        "LICENSE",
+        "docs/THIRD_PARTY.md",
+        "release/",
+        "coordination/reports/licensing.md"
+      ],
+      "acceptance": [
+        "Record licenses for esmini 3.10.0, its models/resources and other bundled dependencies; distinguish redistributable from local-only files.",
+        "Add notices and release guidance without vendoring binaries, models or assets whose licence does not permit it.",
+        "Flag unclear assets for operator review and do not claim legal approval."
+      ],
+      "checks": [
+        [
+          "python3",
+          "tools/validate_coordination.py"
+        ]
+      ],
+      "priority": 30
+    },
+    {
+      "id": "ISOTP-EXT-00",
+      "title": "Fix extended-address ISO-TP frame bounds, capacity and rejected-send state",
+      "depends_on": [
+        "BASE-01",
+        "CORE-02"
+      ],
+      "capabilities": [
+        "cpp",
+        "tests"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "src/IsoTp.cpp",
+        "headers/IsoTp.hpp",
+        "app/transport.py",
+        "tests/test_isotp.cpp",
+        "tests/vectors/isotp/"
+      ],
+      "acceptance": [
+        "Reject truncated address-prefix/PCI frames before indexing and preserve session state after malformed receive or invalid send.",
+        "Subtract the existing two-byte extended-address prefix consistently from classic/FD single-, first- and consecutive-frame capacities; support legal segmented transfers through 4095 bytes.",
+        "Add independently expected classic/FD boundary and malformed-frame vectors plus native tests for block/sequence wrap, session reuse and rejected-send recovery; retain all existing vectors.",
+        "Keep normal-address P0 frames, clock behavior and project hashes unchanged; Python remains an oracle, not production transport.",
+        "Verify the short-frame reproducer with sanitizer instrumentation and run genuine CTest plus strict P0/vector regressions."
+      ],
+      "checks": [
+        [
+          "cmake",
+          "-S",
+          ".",
+          "-B",
+          "build/native",
+          "-DCMAKE_BUILD_TYPE=Release",
+          "-DVEHICLE_LAB_P0_TESTS=ON"
+        ],
+        [
+          "cmake",
+          "--build",
+          "build/native",
+          "-j2"
+        ],
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure",
+          "--no-tests=error"
+        ]
+      ],
+      "priority": 14
+    },
+    {
+      "id": "NATIVE-LAB-01",
+      "title": "Deliver the verified native interactive vehicle laboratory",
+      "depends_on": [
+        "CORE-02",
+        "TIME-00",
+        "PLANT-00",
+        "UI-BOOT-00"
+      ],
+      "capabilities": [
+        "cpp",
+        "ui"
+      ],
+      "review_capabilities": [
+        "review"
+      ],
+      "preferred": [
+        "codex",
+        "opencode"
+      ],
+      "write_scopes": [
+        "native/",
+        "app/",
+        "headers/",
+        "src/",
+        "resources/",
+        "tests/",
+        "docs/",
+        "CMakeLists.txt"
+      ],
+      "acceptance": [
+        "Live native controls/monitoring and 2D car health with real state/fault response.",
+        "Editable geometric traffic, proportional following, project switching and custom car meshes.",
+        "Real Qt workflow, original P0 compatibility and sustained following evidence; declare planar/recorder limits."
+      ],
+      "checks": [
+        [
+          "ctest",
+          "--test-dir",
+          "build/native",
+          "--output-on-failure",
+          "--no-tests=error",
+          "-j3"
+        ]
+      ],
+      "priority": 12
     }
   ]
 }

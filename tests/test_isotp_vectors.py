@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(ROOT/"app"))
 from transport import IsoTp
 VECTORS=ROOT/"tests/vectors/isotp"
-BINARY=ROOT/"build/ecu_kernel"
+BINARY=Path(os.environ.get("ECU_BINARY",ROOT/"build/ecu_kernel"))
 SHARED=("fd","link_length","block_size","stmin","extended","n_as","n_bs","n_ar","n_cr")
 
 def fromhex(text):return [int(text[i:i+2],16) for i in range(0,len(text),2)]

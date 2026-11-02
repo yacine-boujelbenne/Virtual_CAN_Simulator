@@ -63,6 +63,19 @@ class CoordinatorTests(unittest.TestCase):
         self.board['tasks'] += [self.task('TEST-02','src/one.cpp'),self.task('TEST-03','ui/panel.cpp')];self.c.init(self.board)
         self.c.claim('opencode');second=self.c.claim('codex');self.assertEqual(second['task_id'],'TEST-03')
 
+    def test_parallel_instances_hold_disjoint_tasks(self):
+        self.board['tasks'] += [self.task('TEST-02','ui/panel.cpp'),self.task('TEST-03','docs/readme.md')];self.c.init(self.board)
+        first=self.c.claim('opencode',instance='a');second=self.c.claim('opencode',instance='b')
+        self.assertIsNotNone(first);self.assertIsNotNone(second);self.assertNotEqual(first['task_id'],second['task_id'])
+        self.assertIsNone(self.c.claim('opencode',instance='a'))
+        self.assertEqual(self.c.task(first['task_id'])['owner'],'opencode#a')
+        self.assertEqual(self.c.task(second['task_id'])['owner'],'opencode#b')
+
+    def test_instance_cannot_review_own_provider_work(self):
+        t=self.c.claim('opencode',instance='a');sha=self.commit(t)
+        self.c.submit(t['task_id'],t['claim_token'],self.report(t,'ready_for_review',sha))
+        self.assertIsNone(self.c.claim('opencode',instance='b',phase='review'))
+
     def test_expired_token_fenced_and_worktree_preserved(self):
         old=self.c.claim('opencode');self.clock.now+=31
         new=self.c.claim('codex');self.assertNotEqual(old['claim_token'],new['claim_token'])
@@ -160,5 +173,31 @@ class CoordinatorTests(unittest.TestCase):
             finally:c.close()
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:rows=list(pool.map(claim,['opencode','codex']))
         self.assertEqual(sum(r is not None for r in rows),1)
+
+    def test_stop_file_blocks_manual_claim(self):
+        (self.c.home/'STOP').write_text('stop')
+        self.assertIsNone(self.c.claim('opencode',instance='manual'))
+
+    def test_named_instance_capacity_cools_base_provider(self):
+        t=self.c.claim('opencode',instance='advisory')
+        self.c.submit(t['task_id'],t['claim_token'],self.report(t,'capacity'))
+        p=dict(self.c.db.execute("SELECT * FROM providers WHERE name='opencode'").fetchone())
+        self.assertGreater(p['until_ts'],self.clock())
+        self.assertIsNone(self.c.claim('opencode',instance='peer'))
+
+    def test_named_instance_handoff_appears_in_provider_progress(self):
+        t=self.c.claim('opencode',instance='advisory')
+        report=self.report(t,'partial');report['summary']='UNIQUE_INSTANCE_HANDOFF_EVIDENCE'
+        self.c.submit(t['task_id'],t['claim_token'],report);self.c.export_progress()
+        self.assertIn(report['summary'],(self.c.home/'progress/OPENCODE.md').read_text())
+
+    def test_imported_codex_patch_is_not_codex_reviewable(self):
+        t=self.c.claim('opencode',instance='importer');self.commit(t)
+        w=pathlib.Path(t['worktree'])
+        run_git(w,'commit','--amend','--no-edit','--author=Codex <codex@openai.com>')
+        sha=run_git(w,'rev-parse','HEAD')
+        self.c.submit(t['task_id'],t['claim_token'],self.report(t,'ready_for_review',sha))
+        self.assertEqual(self.c.task(t['task_id'])['author'],'codex,opencode')
+        self.assertIsNone(self.c.claim('codex',instance='reviewer',phase='review'))
 
 if __name__=='__main__':unittest.main()

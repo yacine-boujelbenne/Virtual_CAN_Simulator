@@ -2,6 +2,7 @@
 #include "CanBus.hpp"
 #include "EcuKernel.hpp"
 #include "json.hpp"
+#include "../native/world/TrafficWorld.hpp"
 #include <map>
 #include <memory>
 #include <random>
@@ -13,6 +14,8 @@ public:
     Json command(const Json &request);
     Json snapshot() const;
     void step(unsigned count = 1);
+    bool running() const { return running_; }
+    unsigned stepMilliseconds() const { return stepMs_; }
     static void validateEcu(const Json &definition, unsigned stepMs = 10);
 private:
     struct Ecu {
@@ -23,6 +26,7 @@ private:
         std::map<std::string,bool> dtcActive, dtcStored;
         std::unique_ptr<EcuKernel> kernel;
         Json inbox=Json::array(), hardware=Json::object(), timing=Json::object();
+        uint64_t lastJobId=0;
     };
     // Rolling performance window: task cost, end-to-end latency and frame counters per ECU.
     struct EcuMetrics {
@@ -39,7 +43,18 @@ private:
     std::mt19937 random_{42};
     unsigned stepMs_ = 10;
     uint64_t tick_ = 0, frameCount_ = 0, frameBits_ = 0;
-    bool running_ = false, distributed_ = false;
+    bool running_ = false, distributed_ = false, lateralPlant_ = false;
+    double wheelbaseM_ = 2.7, maxSteerAngleRad_ = 0.6, parkSpeedMps_ = 0.5, maxYawRateRadS_ = 2.0;
+    double parkBrakeMps2_ = 2.0;
+    vclab::TrafficWorld trafficWorld_;
+    bool trafficEnabled_=false;
+    bool trafficContact_=false;
+    std::string leadActor_;
+    void observeTraffic();
+    bool gripPhysics_=false;
+    double massKg_=1500,wheelRadiusM_=0.32,dragAreaM2_=0.7,rollingCoefficient_=0.012,steerRate_=0.8,previousSteer_=0;
+    double brakeForceN_=12000,driveRatio_=9,torqueLimitNm_=320;
+    bool parkInterlockRamping_ = false;
     uint64_t epoch_=0;
     Json prepared_=nullptr, policies_=Json::array(), scheduled_=Json::array();
     Json envelopes_=Json::array(), actuations_=Json::array();
@@ -53,7 +68,7 @@ private:
     void pushActuation(const Json &envelope);
     Json prepareTick();
     Json completeTick(const Json &results);
-    void transmit(const std::string &source, const Json &message, const Can &frame, const std::string &bus, bool gateway = false);
+    void transmit(const std::string &source, const Json &message, const Can &frame, const std::string &bus, bool gateway = false, const Json &timing = Json());
     void reset();
     void applyScenario(const Json &scenario, const Json *inlineDefinitions);
     void tick();

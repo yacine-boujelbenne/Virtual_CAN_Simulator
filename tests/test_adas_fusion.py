@@ -6,13 +6,14 @@ Replays the distributed protocol against the native binaries:
 Every test starts from a fresh controller and a fresh set of ECU kernels.
 """
 import json
+import os
 import subprocess
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SIM = ROOT / "build" / "vehicle_sim"
-KERNEL = ROOT / "build" / "ecu_kernel"
+SIM = Path(os.environ.get("SIM_BINARY", ROOT / "build" / "vehicle_sim"))
+KERNEL = Path(os.environ.get("ECU_BINARY", ROOT / "build" / "ecu_kernel"))
 RADAR_ID = 1024
 OBJECTS = ["obj0", "obj1", "obj2", "obj3"]
 OBJECT_SIGNALS = [f"{prefix}_{field}" for prefix in OBJECTS

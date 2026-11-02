@@ -9,18 +9,24 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Protocol codec tests
-        run: python3 tests/test_protocols.py -v
-      - name: Native build and envelope/perception checks
+      - name: Install genuine native test dependencies
         run: |
-          python3 -m pip install --break-system-packages jsonschema || python3 -m pip install jsonschema
-          g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/IsoTp.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/Sha256.cpp src/SimulationManager.cpp app/main.cpp -o build/vehicle_sim -lpthread
-          g++ -std=c++20 -Iheaders -O2 -Wall -Wextra src/Can.cpp src/CanBus.cpp src/IsoTp.cpp src/CanTp.cpp src/Sender.cpp src/Receiver.cpp src/Sha256.cpp src/SimulationManager.cpp app/ecu_main.cpp -o build/ecu_kernel -lpthread
-          python3 tests/test_envelopes.py -v
-          python3 tests/test_adas_fusion.py -v
-          python3 tests/test_isotp_vectors.py -v
-          python3 tests/test_project_ab.py -v
-          python3 tests/test_performance.py -v
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ make libgtest-dev python3-jsonschema
+      - name: Configure full native and P0 baseline
+        run: cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release -DVEHICLE_LAB_P0_TESTS=ON
+      - name: Build controller, workers and GoogleTest cases
+        run: cmake --build build/native -j2
+      - name: Run named CTest cases and strict P0 regressions
+        run: |
+          ctest --test-dir build/native --output-on-failure --no-tests=error
+          python3 tools/check_baseline.py --verify-p0
+      - name: Save native test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-ctest-results
+          path: build/native/Testing/
       - name: Build ECU and controller images (includes C++ tests)
         run: docker compose build
       - name: Start all nine containers
@@ -35,11 +41,12 @@ jobs:
           print("Verified nine distinct containers")
           PY
       - name: HTTP application integration
+        env:
+          TEST_URL: http://127.0.0.1:8080
         run: |
-          python3 tests/test_web.py -v
-          TEST_URL=http://127.0.0.1:8080 python3 tests/test_project_ab.py -v
+          python3 tests/run_regressions.py test_web test_project_ab.ProjectHttp
       - name: Distributed ECU and failure integration
-        run: python3 tests/test_distributed.py -v
+        run: python3 tests/run_regressions.py test_distributed
       - name: Actual worker-container stop and recovery
         run: |
           docker compose stop ecu-motor

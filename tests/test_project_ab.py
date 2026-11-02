@@ -14,7 +14,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SIM = ROOT / "build" / "vehicle_sim"
+SIM = Path(os.environ.get("SIM_BINARY", ROOT / "build" / "vehicle_sim"))
 SCENARIO = ROOT / "resources" / "scenarios" / "ev_basic.json"
 sys.path.insert(0, str(ROOT / "app"))
 from process import KernelProcess  # noqa: E402

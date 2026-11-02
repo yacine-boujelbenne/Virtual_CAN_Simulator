@@ -1,6 +1,6 @@
 # Start here: native C++ vehicle laboratory
 
-Prepared 24 October 2026 from the supplied README and CHECKPOINT. This pack defines the next development cycle; it does not claim the native desktop/3D application already exists.
+Updated 3 November 2026. The native desktop and interactive driving platform now exist; see `coordination/CURRENT_STATE.md`, `coordination/completions.json` and `docs/PLATFORM_STATUS.md`. The instructions below retain the original coordination workflow and historical baseline procedure. Do not re-run an already completed baseline migration.
 
 Read in order:
 

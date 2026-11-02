@@ -1,0 +1,50 @@
+{
+  "date": "2026-11-03",
+  "removed_obsolete_source_paths": [
+    "CLI-IO-00-local-reviewer-prompt.txt",
+    "planning_report.md",
+    "handoff/leased-task-report-20261101.md",
+    "docs/NATIVE_DESKTOP_PROGRESS.md",
+    "docs/NATIVE_REPAIR_EXECUTION.md",
+    "docs/PLATFORM_REPAIR_PLAN.md",
+    "coordination/progress/NATIVE_GOAL.md",
+    "tests/test.py",
+    "config.toml",
+    "release/config.json",
+    "Main.cpp",
+    "docs/NATIVE_INTERACTIVE_EXECUTION.md"
+  ],
+  "retained": [
+    "All native/P0 regression tests and ISO-TP oracles",
+    "Third-party assets, licenses, references and user configuration",
+    "Seven dirty worktrees and all Git attempt history",
+    "One operational build/native tree and build/deps"
+  ],
+  "removed_clean_attempt_worktrees": 100,
+  "preserved_dirty_attempt_worktrees": 7,
+  "backup_location": "/home/yacine/Desktop/ECU_Platform/maintenance-backups/20261103-004829",
+  "removed_generated_paths": [
+    "build/libcantp_lib.a",
+    "build/CTestTestfile.cmake",
+    "build/run_tests",
+    "build/Makefile",
+    "build/ecu_kernel",
+    "build/CMakeFiles",
+    "build/Testing",
+    "build/cmake_install.cmake",
+    "build/DartConfiguration.tcl",
+    "build/goal-clean",
+    "build/CMakeCache.txt",
+    "build/vehicle_sim",
+    "build/goal-headless",
+    "build/libvehicle_runtime.a",
+    "build/native/build",
+    "build/native/desktop-demo",
+    "build/native/desktop-demo-final",
+    "build/native/goal-evidence",
+    "build/native/interactive-first-pass",
+    "build/native/physics-comparison",
+    "build/native/repair-soak.json",
+    "build/native/workspace-evidence"
+  ]
+}

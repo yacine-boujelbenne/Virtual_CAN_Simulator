@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "name": "Adaptive following demonstration",
+  "step_ms": 10,
+  "bitrate": 500000,
+  "plant": {
+    "model": "bicycle_grip_v2",
+    "wheelbase_m": 2.7,
+    "max_steer_angle_rad": 0.6,
+    "park_speed_mps": 0.5,
+    "max_yaw_rate_rad_s": 2.0,
+    "initial_gear": 2,
+    "mass_kg": 1500,
+    "wheel_radius_m": 0.32,
+    "drag_area_m2": 0.7,
+    "rolling_coefficient": 0.012,
+    "steer_rate_rad_s": 0.8
+  },
+  "initial_state": {
+    "soc": 85,
+    "speed": 15,
+    "wheel_fl": 15,
+    "wheel_fr": 15,
+    "wheel_rl": 15,
+    "wheel_rr": 15
+  },
+  "sensors": [
+    {
+      "name": "speed_sensor",
+      "source": "speed",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "rpm_sensor",
+      "source": "rpm",
+      "min": 0,
+      "max": 16000,
+      "unit": "rpm",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "temperature_sensor",
+      "source": "motor_temperature",
+      "min": -40,
+      "max": 150,
+      "unit": "\u00b0C",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "battery_temperature_sensor",
+      "source": "battery_temperature",
+      "min": -40,
+      "max": 100,
+      "unit": "\u00b0C",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "soc_sensor",
+      "source": "soc",
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "voltage_sensor",
+      "source": "voltage",
+      "min": 0,
+      "max": 600,
+      "unit": "V",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "current_sensor",
+      "source": "current",
+      "min": -300,
+      "max": 300,
+      "unit": "A",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "wheel_fl_sensor",
+      "source": "wheel_fl",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "wheel_fr_sensor",
+      "source": "wheel_fr",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "wheel_rl_sensor",
+      "source": "wheel_rl",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "wheel_rr_sensor",
+      "source": "wheel_rr",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "radar_distance_sensor",
+      "source": "lead_distance",
+      "min": 0,
+      "max": 600,
+      "unit": "m",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "closing_speed_sensor",
+      "source": "closing_speed",
+      "min": 0,
+      "max": 80,
+      "unit": "m/s",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "static_object_sensor",
+      "source": "static_object_range",
+      "min": 0,
+      "max": 500,
+      "unit": "m",
+      "period_ms": 10,
+      "noise": 0
+    },
+    {
+      "name": "front_perception_sensor",
+      "source": "lead_distance",
+      "min": 0,
+      "max": 600,
+      "unit": "m",
+      "period_ms": 20,
+      "noise": 0.05
+    }
+  ],
+  "ecus": [
+    "../ecu_templates/motor_ev.json",
+    "../ecu_templates/abs.json",
+    "../ecu_templates/bms.json",
+    "../ecu_templates/dynamics.json",
+    "../ecu_templates/cluster.json",
+    "../ecu_templates/radar.json",
+    "../ecu_templates/adas_following.json",
+    "../ecu_templates/eps.json",
+    "../ecu_templates/transmission.json"
+  ],
+  "buses": [
+    {
+      "id": "powertrain",
+      "name": "Powertrain CAN",
+      "bitrate": 500000,
+      "data_bitrate": 500000,
+      "fd": false
+    },
+    {
+      "id": "adas",
+      "name": "ADAS CAN FD",
+      "bitrate": 500000,
+      "data_bitrate": 2000000,
+      "fd": true
+    }
+  ],
+  "gateway_routes": [
+    {
+      "id": 288,
+      "from": "powertrain",
+      "to": "adas"
+    },
+    {
+      "id": 1104,
+      "from": "adas",
+      "to": "powertrain"
+    }
+  ],
+  "traffic": [
+    {
+      "id": "lead",
+      "x": 84.5,
+      "y": 0,
+      "yaw": 0,
+      "speed": 8,
+      "target_speed": 8,
+      "length": 4.5,
+      "width": 1.8
+    }
+  ],
+  "initial_controls": {
+    "assist_enabled": 1,
+    "aeb_enabled": 1,
+    "target_speed": 72,
+    "following_time_s": 1.5,
+    "following_gap_m": 7,
+    "following_gain": 0.45,
+    "road_friction": 0.8,
+    "ambient": 25,
+    "road_grade_deg": 0,
+    "headwind_mps": 0
+  }
+}

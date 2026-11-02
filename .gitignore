@@ -6,3 +6,12 @@ __pycache__/
 *.zip
 .env
 .opencode/
+
+# Local development state and generated evidence
+.orchestrator/
+.handoff/
+coordination/providers.local.json
+node_modules/
+.pytest_cache/
+core
+core.*
