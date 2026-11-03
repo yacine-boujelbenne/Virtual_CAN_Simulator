@@ -122,6 +122,7 @@ def build_definition(body, engine):
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "VehicleLab/1.0"
+    max_body_bytes = 2000000
 
     def log_message(self, format, *args):
         pass
@@ -169,8 +170,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             self.connection.settimeout(60)
             length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0 or length > 2000000:
-                return self.send(413, {"error": "Request must be 1 byte..2 MB"})
+            if length <= 0 or length > self.max_body_bytes:
+                return self.send(413, {"error": f"Request must be 1 byte..{self.max_body_bytes} bytes"})
             if self.headers.get_content_type() != "application/json":
                 return self.send(415, {"error": "Use application/json"})
             body = json.loads(self.rfile.read(length))

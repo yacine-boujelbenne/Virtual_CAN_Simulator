@@ -2,9 +2,10 @@
 const $ = id => document.getElementById(id);
 const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 let state, templates={}, selected='Motor ECU', activeTab='simulate', frameSelection, history=[], lastTime=-1, dragging=false, dragNode=null;
-const positions=new Map();
+const positions=new Map();let topologyShape='';let mutationVersion=0,commandQueue=Promise.resolve();
 async function api(url,body) {
-  const result=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});
+  if(body)mutationVersion++;
+  const result=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:typeof body==='string'?body:JSON.stringify(body)}:{});
   const data=await result.json();
   if(!result.ok || data.error)throw new Error(data.error || 'Request failed');
   return data;
@@ -13,11 +14,14 @@ function toast(message,error=false) {
   $('toast').textContent=message;$('toast').className='toast show'+(error?' error':'');
   clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').classList.remove('show'),5000);
 }
-async function command(action,extra={}) {
-  const data=await api('/api/command',{action,...extra});
-  if(data.ecus){state=data;render();}
-  return data;
+function command(action,extra={}) {
+  const task=commandQueue.catch(()=>{}).then(async()=>{
+    const data=await api('/api/command',{action,...extra});
+    if(data.ecus){state=data;render();}
+    return data;
+  });commandQueue=task;return task;
 }
+
 function guarded(fn){return async(...args)=>{try{await fn(...args);}catch(error){toast(error.message,true);}};}
 function tab(name) {
   activeTab=name;document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active',el.id===name));
@@ -38,7 +42,7 @@ function setOptions(id,values) {
 function render() {
   const cluster=state.ecus.find(e=>e.name==='Instrument Cluster')?.values || {};
   const connected=state.cluster?.connected||0,required=state.cluster?.required||0;
-  $('cluster-mode').textContent=state.cluster?.mode==='distributed'?'Distributed kernels':'Embedded development';
+  $('cluster-mode').textContent=state.cluster?.controller==='native-cpp'?'Native C++ engine':'Compatibility runtime';
   $('node-count').textContent=required?connected+' / '+required:String(state.ecus.length);
   $('cluster-status').textContent=state.cluster?.last_error?'Clock paused · worker fault':required?'All required workers connected':'Local kernel runtime';
   $('container-summary').textContent=required?'1 controller + '+required+' ECUs + '+(state.cluster.reserve_slots||0)+' reserve':'Use Docker Compose for separate ECU containers';
@@ -84,18 +88,23 @@ function render() {
   if(activeTab==='analyze')renderFrames();
   if(activeTab==='diagnose')renderDTCs();
   if(activeTab==='performance')renderPerformance();
+  if(window.renderNative)window.renderNative(state);
 }
 function renderNodes() {
-  const holder=$('ecu-nodes'),area=$('topology'),width=area.clientWidth,height=area.clientHeight,narrow=width<540;
+  const holder=$('ecu-nodes'),area=$('topology'),width=area.clientWidth,narrow=width<540;
   const top=state.ecus.filter(e=>['Motor ECU','ABS ECU','BMS ECU','Dynamics ECU'].includes(e.name));
   const bottom=state.ecus.filter(e=>!top.includes(e));
+  const shape=state.ecus.map(e=>e.name).join('|')+':'+narrow;
+  if(shape!==topologyShape){positions.clear();topologyShape=shape;}
+  const maxCols=narrow?2:5,topBase=narrow?18:35,powerY=topBase+Math.ceil(top.length/Math.min(maxCols,top.length))*123+10,bottomBase=powerY+55,fdY=bottomBase+Math.ceil(bottom.length/Math.min(maxCols,bottom.length))*123+10;
+  area.style.height=Math.max(440,fdY+50)+'px';$('powertrain-bus').style.top=powerY+'px';$('adas-bus').style.top=fdY+'px';const height=area.clientHeight;
   for(const ecu of state.ecus){
     const key=ecu.name;
     let node=[...holder.children].find(n=>n.dataset.name===key);
     if(!node){node=document.createElement('div');node.className='ecu-node';node.dataset.name=key;holder.append(node);node.onpointerdown=startDrag;node.onclick=()=>{if(dragging)return;selected=key;render();};}
-    const list=top.includes(ecu)?top:bottom,index=list.indexOf(ecu),cols=narrow?2:list.length;
+    const list=top.includes(ecu)?top:bottom,index=list.indexOf(ecu),cols=Math.min(maxCols,list.length);
     if(!positions.has(key)){
-      const y=top.includes(ecu)?(narrow?18+Math.floor(index/cols)*123:35):(narrow?322+Math.floor(index/cols)*123:267);
+      const y=(top.includes(ecu)?topBase:bottomBase)+Math.floor(index/cols)*123;
       positions.set(key,{x:(index%cols+.5)/cols,y:y/height});
     }
     const fault=ecu.state==='FAULT'||ecu.container?.status==='fault';
@@ -239,7 +248,7 @@ function drawPerformanceChart() {
 }
 $('play').onclick=guarded(()=>command(state.running?'pause':'run'));
 $('step').onclick=guarded(async()=>{await command('pause');await command('step');});
-$('reset').onclick=guarded(async()=>{await command('reset');frameSelection=null;toast('Scenario reset.');});
+$('reset').onclick=guarded(async()=>{await command('restart_project');frameSelection=null;toast('Scenario reset.');});
 let controlTimer;
 for(const [id,key] of [['throttle','throttle'],['brake','brake'],['friction','road_friction']]){
   $(id).oninput=()=>{const value=Number($(id).value)/100;$(id+'-value').textContent=id==='friction'?number(value,2)+' μ':Math.round(value*100)+'%';clearTimeout(controlTimer);controlTimer=setTimeout(guarded(()=>command('controls',{values:{throttle:Number($('throttle').value)/100,brake:Number($('brake').value)/100,road_friction:Number($('friction').value)/100}})),40);};
@@ -280,16 +289,17 @@ $('download-definition').onclick=guarded(async()=>{
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=definition.name.replace(/[^a-z0-9_-]/gi,'_')+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 $('export-project').onclick=guarded(async()=>{
-  const project=await api('/api/project');
-  const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});
+  const response=await fetch('/api/project');if(!response.ok)throw Error('Project export failed');
+  const text=await response.text(),project=JSON.parse(text);
+  const blob=new Blob([text],{type:'application/json'});
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=(project.name||'project').replace(/[^a-z0-9_-]/gi,'_')+'.vcanproj';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   $('project-badge').textContent='EXPORTED';$('project-hash').textContent=project.project_hash;
   toast('Project exported · '+project.project_hash.slice(7,19)+'…');
 });
 $('import-project').onchange=guarded(async()=>{
   const file=$('import-project').files[0];if(!file)return;
-  const project=JSON.parse(await file.text());
-  const result=await api('/api/project',{project});
+  const text=await file.text();JSON.parse(text);
+  const result=await api('/api/project','{"project":'+text+'}');
   $('project-badge').textContent='IMPORTED';$('project-hash').textContent=result.project_hash;
   toast('Project imported · '+result.project_hash.slice(7,19)+'…');
   await poll();
@@ -317,7 +327,7 @@ window.addEventListener('resize',()=>{positions.clear();if(state)render();});
 let polling=false;
 async function poll() {
   if(polling)return;polling=true;
-  try{state=await api('/api/state');render();$('connection-label').textContent='Runtime connected';$('connection-light').style.background='var(--cyan)';}
+  try{const version=mutationVersion,data=await api('/api/state');if(version===mutationVersion){state=data;render();}$('connection-label').textContent='Runtime connected';$('connection-light').style.background='var(--cyan)';}
   catch(error){$('connection-label').textContent='Runtime unavailable';$('connection-light').style.background='var(--red)';}
   finally{polling=false;}
 }
@@ -328,5 +338,5 @@ async function poll() {
       const button=document.createElement('button');button.textContent=definition.name;button.onclick=()=>editDefinition(definition);return button;
     }));editDefinition(templates.abs);
   }catch(error){toast(error.message,true);}
-  setInterval(poll,250);
+  setInterval(poll,150);
 })();

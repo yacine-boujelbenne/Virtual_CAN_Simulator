@@ -1,0 +1,6 @@
+{
+  "name": "vehicle-lab-showcase-verification",
+  "private": true,
+  "scripts": {"test": "node ../tests/showcase/browser.cjs"},
+  "devDependencies": {"@playwright/test": "1.56.1"}
+}

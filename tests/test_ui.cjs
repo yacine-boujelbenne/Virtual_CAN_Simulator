@@ -24,8 +24,10 @@ async function command(action,extra={}) {
   const d=dom.window.document;
   try {
     await waitFor(()=>d.getElementById('connection-label').textContent==='Runtime connected','runtime connection');
-    assert.equal(d.querySelectorAll('.ecu-node').length,7);
-    await waitFor(()=>d.querySelectorAll('#template-list button').length===7,'ECU templates');
+    const initial=await command('snapshot'),initialCount=initial.ecus.length;
+    assert.equal(d.querySelectorAll('.ecu-node').length,initialCount);
+    const templateCount=Object.keys(await (await fetch(base+'/api/templates')).json()).length;
+    await waitFor(()=>d.querySelectorAll('#template-list button').length===templateCount,'ECU templates');
     const throttle=d.getElementById('throttle');throttle.value='60';throttle.dispatchEvent(new dom.window.Event('input'));
     await waitFor(()=>d.getElementById('throttle-value').textContent==='60%','throttle control');await sleep(100);
     await command('step',{count:1000});
@@ -39,7 +41,7 @@ async function command(action,extra={}) {
     await waitFor(()=>d.getElementById('validation-badge').textContent==='VALID','ECU builder');
     assert.ok(d.getElementById('provider-note').textContent.includes('offline template'));
     d.getElementById('add-ecu').click();
-    await waitFor(()=>d.querySelectorAll('.ecu-node').length===8,'imported ECU on canvas');
+    await waitFor(()=>d.querySelectorAll('.ecu-node').length===initialCount+1,'imported ECU on canvas');
     assert.deepEqual(errors,[]);
     process.stdout.write('UI smoke checks passed: runtime, controls, telemetry, CAN decoder, UDS, builder, added ECU.\n');
   } finally {dom.window.close();}

@@ -1,5 +1,10 @@
 # Virtual CAN / Vehicle Lab
 
+This is **showcase/web**, the optional browser branch. Start with
+[showcase/README.md](showcase/README.md). The native product lives on
+`platform/native`; its description and build instructions follow below.
+
+
 A native C++20 vehicle experiment platform with a Qt desktop, a headless runner
 and one isolated C++ process per ECU. The controller owns the simulation clock,
 vehicle plant, CAN/CAN FD broker, project lifecycle and tick barrier.
