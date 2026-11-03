@@ -31,6 +31,24 @@ After correcting tick pacing, a 120.43-second run averaged 97.66 ticks per host
 second against a 100 Hz target. Following settled at 8.00033 m/s behind an 8 m/s
 lead, with a 19.4631 m minimum sampled gap. These are local model outputs.
 
+## Optional web showcase
+
+`showcase/web` adds a browser client of the C++ engine, with one native controller
+clock, native workers, health, the same imported car geometry, actor editing,
+following/physics controls, project sessions/files, ECU program deployment and
+creation, CAN/diagnostics/performance and all live values. The showcase starts its
+own experiment; it does not attach to an already running Qt session. Custom mesh
+authoring stays in the desktop and arrives through saved native project files.
+
+A clean Release engine build from the showcase checkout passed without Qt/GTest.
+**5/5 HTTP integration tests** and the full Chromium browser workflow passed,
+including canonical project downloads/imports, physical steering after deployment,
+new worker creation, diagnostics and a 390 px layout, with zero script errors.
+[Compact web evidence](verification/web.json). A pinned optional test package and
+CI workflow are on the web branch; hosted CI was not run here. Browser operation
+requires no npm/CDN. Future native work must start from the verified platform
+baseline, with historical candidates rebased/retested before integration.
+
 ## Current limits and open work
 
 The plant is planar and educational. Visual body pitch/roll are cues, and mesh

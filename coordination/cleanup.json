@@ -46,5 +46,16 @@
     "build/native/physics-comparison",
     "build/native/repair-soak.json",
     "build/native/workspace-evidence"
+  ],
+  "archived_scratch_removed": [
+    ".orchestrator/collaboration",
+    ".orchestrator/progress/OPENCODE-SESSION-A.md",
+    "build/deps/packages"
+  ],
+  "web_checkout": "/home/yacine/Desktop/ECU_Platform/Virtual_CAN_Simulator-web-showcase",
+  "web_source_commit": "9219550bf5243e07596afc31f420e7c1e99a60b0",
+  "retained_builds": [
+    "build/native",
+    "build/deps/usr"
   ]
 }

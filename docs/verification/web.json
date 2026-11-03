@@ -1,0 +1,40 @@
+{
+  "passed": true,
+  "checks": [
+    "nine native workers",
+    "native health and 3D mesh",
+    "traffic add/update/reposition/remove",
+    "following controls",
+    "physics deployment",
+    "session project switching",
+    "canonical project download/import",
+    "ECU edit/deploy with steering impact",
+    "native Run/Pause",
+    "all seven workspaces",
+    "ISO-TP VIN browser controls",
+    "offline ECU builder and added worker",
+    "stress health response",
+    "390px responsive layout"
+  ],
+  "console_errors": [],
+  "date": "2026-11-03",
+  "http_integration": {
+    "passed": 5,
+    "failed": 0,
+    "elapsed_seconds": 12.173
+  },
+  "clean_engine_build": {
+    "build_type": "Release",
+    "desktop": false,
+    "testing": false,
+    "result": "passed"
+  },
+  "engine_source": "Native C++ engine unchanged; core source tracking fixed before clean build",
+  "browser": "Pinned Playwright 1.56.1 / Chromium headless shell 141; no script errors",
+  "limitations": [
+    "Independent showcase session; does not attach to existing Qt process",
+    "Custom shapes arrive through native saved project files",
+    "Same planar plant and recording/replay limits as desktop"
+  ],
+  "hosted_ci": "workflow added; hosted execution not performed"
+}
