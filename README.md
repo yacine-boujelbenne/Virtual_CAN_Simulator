@@ -1,93 +1,259 @@
-# can simulator
+# ECU Platform — Virtual CAN / Vehicle Lab
 
+Build a virtual vehicle network, program its electronic control units (ECUs), and watch their CAN messages affect a running vehicle. Vehicle Lab is a **C++20 simulation platform for Linux** with a Qt desktop, a headless command-line runner, and an optional browser showcase.
 
+Use it to explore vehicle control, CAN/CAN FD communication, sensor faults, diagnostics, and timing without physical ECU hardware. Each ECU runs in its own native process. One C++ controller owns the simulation clock, vehicle model, and message delivery.
 
-## Getting started
+**The `main` branch includes both the native desktop and the optional browser showcase.** Choose the desktop for full authoring and mesh import, the browser for a local demonstration, or the headless runner for scripted experiments.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+[Screenshots](#screenshots) · [Setup](#setup-and-launch) · [First experiment](#try-your-first-experiment) · [Browser setup](#optional-browser-showcase) · [Headless mode](#headless-mode) · [Tests](#build-and-run-tests) · [Troubleshooting](#troubleshooting)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## What you can do
 
-## Add your files
+| Area | Capabilities |
+| --- | --- |
+| ECU workroom | Inspect and move ECU nodes, edit topology, add ECUs and CAN buses, and inspect worker status and process IDs. |
+| ECU programming | Edit runtime JSON tasks, state machines, signals, and hardware budgets; validate changes, then deploy and restart. The editor does not compile arbitrary C/C++ firmware. |
+| Driving simulation | Control throttle, brake, steering, and P/N/D gears; view motion in a 3D perspective and top-down trace. |
+| Traffic and following | Add cars, change their speed and position, and tune cruise speed, time gap, standstill gap, and proportional following gain. |
+| Physics and health | Experiment with grip, mass, drag, wind, slope, and steering dynamics; monitor temperatures, charge, tire demand, and warnings. |
+| CAN and diagnostics | Inspect CAN/CAN FD frames, task and delivery latency, sensor faults, traffic delay/drop policies, and ISO-TP exchanges such as reading a VIN. |
+| Projects and telemetry | Save/load `.vcanproj` configurations, switch experiments, and record sampled snapshots as JSONL. |
+| Vehicle appearance | Import STL, OBJ, glTF, or GLB meshes and save their visual geometry with a project. |
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+## Screenshots
 
+### Simulation and live vehicle health
+
+The Simulation workspace combines driver controls, traffic, vehicle health, a 3D view, and inspection tabs.
+
+![Native Simulation workspace with vehicle health, driving controls, and a traffic actor](docs/images/native-platform.png)
+
+### Driving through the native ECU network
+
+Captured from the application's offscreen driving demo: steering changes the trajectory, CAN frames accumulate, and all nine ECU workers remain connected. The demo pauses at tick boundaries while capturing evidence.
+
+![Native driving demo at 39.8 km/h, showing steering, trajectory, CAN frames, and connected ECU workers](docs/images/native-driving.png)
+
+### Browser showcase
+
+The browser exposes driving, network control, CAN analysis, diagnostics, ECU creation, performance, and live signals. This demonstration capture includes an added observation ECU and an intentionally injected temperature fault.
+
+![Browser vehicle workspace with traffic controls, live telemetry, and an injected temperature fault](docs/images/web-showcase.png)
+
+## How it works
+
+```text
+Qt desktop / headless JSON commands / optional browser adapter
+                              |
+                              v
+                   Native C++ controller
+          clock + vehicle model + CAN/CAN FD broker
+                              |
+                    tick synchronization
+                              |
+            one native worker process for each ECU
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/yacine-boujelbenne-group/can-simulator.git
-git branch -M main
-git push -uf origin main
+
+The interactive vehicle includes Motor, ABS, BMS, Dynamics, Instrument Cluster, Radar, ADAS, EPS, and Transmission ECUs. The controller advances fixed simulation ticks and exchanges inputs, frames, and outputs with the workers. The UI displays snapshots; it does not run a separate vehicle model or advance a second clock.
+
+## Setup and launch
+
+### 1. Open the native source checkout
+
+Clone `main`, then enter the repository root:
+
+```sh
+git clone --branch main https://github.com/yacine-boujelbenne/Virtual_CAN_Simulator.git
+cd Virtual_CAN_Simulator
 ```
 
-## Integrate with your tools
+For an existing checkout, enter the directory containing `CMakeLists.txt`, `native/`, and `resources/`. The parent `ECU_Platform` workspace is not the CMake source directory. All commands below run from the repository root.
 
-- [ ] [Set up project integrations](https://gitlab.com/yacine-boujelbenne-group/can-simulator/-/settings/integrations)
+### 2. Install build dependencies
 
-## Collaborate with your team
+Requirements: **Linux**, a **C++20 compiler**, **CMake 3.16+**, **Qt 6.2+ Widgets**, and **Assimp**. The current worker transport depends on Linux process facilities. Docker, Python, and Node.js are not required to run the native application.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+On Ubuntu/Debian with these packages available:
 
-## Test and Deploy
+```sh
+sudo apt-get update
+sudo apt-get install -y build-essential cmake qt6-base-dev libassimp-dev
+```
 
-Use the built-in continuous integration in GitLab.
+For a separately installed Qt SDK, add `-DCMAKE_PREFIX_PATH="/path/to/Qt/version/gcc_64"` to the configure command below. This development machine uses `$HOME/Qt/6.8.3/gcc_64`; replace that path for your installation.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+### 3. Configure and build
 
-***
+This builds the application without requiring test dependencies:
 
-# Editing this README
+```sh
+cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release \
+  -DVEHICLE_LAB_DESKTOP=ON -DBUILD_TESTING=OFF
+cmake --build build/native -j2
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+The resulting executables are `build/native/vehicle_lab_desktop`, `build/native/vclab`, and `build/native/vclab_worker`. Keep them together: the desktop launches the controller, which launches the workers.
 
-## Suggestions for a good README
+### 4. Launch the desktop
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```sh
+bash tools/run_native_desktop.sh
+```
 
-## Name
-Choose a self-explaining name for your project.
+The application opens the interactive traffic project in **3 Simulation**, paused. The other tabs are **1 ECU workroom** and **2 ECU programming**. The status bar should show **9 / 9 ECU workers connected** for the built-in interactive scenario.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Optional launch modes:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```sh
+# Prepared following experiment: press Run after opening
+bash tools/run_native_desktop.sh --scenario resources/scenarios/ev_following_demo.json
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+# Three separate workspace windows sharing the same experiment
+bash tools/run_native_desktop.sh --windows
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+# Start directly in the program editor
+bash tools/run_native_desktop.sh --workspace programming
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Try your first experiment
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+1. Launch the prepared following scenario with the command above. It starts paused in Drive, with the ego vehicle behind a slower lead car.
+2. Press **Run** and watch speed, lead distance, brake demand, and CAN traffic change. **Pause** freezes simulation time; **Step 10 ms** advances one tick.
+3. In **Interactive Traffic**, adjust the lead car's target speed or add another car. Change following settings and press **Apply adaptive following**.
+4. Open **ECU workroom** to inspect Radar and ADAS, their signals, and their worker status. Use the Simulation inspection tabs for CAN frames, performance, diagnostics, and live signals.
+5. Press **Save project** to keep the deployed configuration as a `.vcanproj`. Use **Open project** to reload it, or open the supplied `resources/projects/following_demo.vcanproj`.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+For manual driving, open the default interactive scenario, select **D**, raise **Throttle**, and press **Run**. Adjust **Steer** to turn and use **Brake + throttle zero** to slow down. Manual braking cancels cruise authority. Reverse is not implemented.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+Program changes take effect only after **Validate** and **Deploy & restart**. Saving a project preserves deployed programs and configuration; loading/restarting resets live motion and time. **Record telemetry** saves sampled observations, not a replayable recording of every event.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+See the [interactive guide](docs/INTERACTIVE_NATIVE_PLATFORM.md) for following, health, project behavior, and mesh import, or the [desktop guide](native/DESKTOP.md) for topology editing and ECU programming.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## Headless mode
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+Build the controller and workers without Qt or Assimp, using a separate build directory:
 
-## License
-For open source projects, say how it is licensed.
+```sh
+cmake -S . -B build/headless -DCMAKE_BUILD_TYPE=Release \
+  -DVEHICLE_LAB_DESKTOP=OFF -DBUILD_TESTING=OFF
+cmake --build build/headless -j2
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+./build/headless/vclab \
+  --scenario resources/scenarios/ev_following_demo.json \
+  --steps 100 --save-project build/headless/following.vcanproj
+
+./build/headless/vclab --project build/headless/following.vcanproj --steps 100
+```
+
+Each run prints a JSON snapshot and exits. `--steps` runs a fixed number of simulation ticks without wall-clock pacing. Without it, `vclab` accepts one JSON command per line on standard input; `--realtime` enables controller-paced execution after a `run` command. See the [headless API and worker guide](native/README.md).
+
+## Build and run tests
+
+Tests additionally need GoogleTest, Qt Test for desktop checks, and Python with `jsonschema` for the P0 regression drivers. On Ubuntu/Debian:
+
+```sh
+sudo apt-get install -y libgtest-dev python3 python3-jsonschema
+
+cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release \
+  -DVEHICLE_LAB_DESKTOP=ON -DBUILD_TESTING=ON \
+  -DVEHICLE_LAB_P0_TESTS=ON
+cmake --build build/native -j2
+ctest --test-dir build/native --output-on-failure --no-tests=error -j2
+```
+
+Add your Qt SDK prefix again if using a separate SDK. The `qt6-base-dev` package supplies Qt Test with the system Qt build.
+
+To run the driving/steering/braking and VIN smoke demo without a display, choose an output directory that does not already exist:
+
+```sh
+./build/native/vehicle_lab_desktop -platform offscreen \
+  --scenario resources/scenarios/ev_lateral.json \
+  --smoke build/native/readme-demo
+```
+
+The demo writes screenshots, a saved project, sampled telemetry, diagnostic output, and `summary.json`. It exits nonzero if its driving checks fail. Offscreen checks do not validate an interactive display session.
+
+## Troubleshooting
+
+| Symptom | What to check |
+| --- | --- |
+| Launcher says to build the desktop first | Configure with `VEHICLE_LAB_DESKTOP=ON` and build in `build/native`; the launcher expects that location. |
+| CMake cannot find Qt6 | Install Qt 6 development packages or set `CMAKE_PREFIX_PATH` to the directory containing your Qt SDK's `lib/cmake`. |
+| CMake cannot find Assimp | Install `libassimp-dev`. The Ubuntu-specific `tools/fetch_native_mesh_deps.sh` is an alternative for the development host; its package names depend on the Ubuntu release. |
+| CMake cannot find GoogleTest | Install `libgtest-dev`, or configure with `BUILD_TESTING=OFF` if you only want to run the application. |
+| Qt cannot connect to a display | Launch inside a graphical Linux session. Use `-platform offscreen` with the smoke demo on a headless host. |
+| Worker startup fails or no ECUs connect | Keep `vclab_worker` beside `vclab`, retain executable permissions, and use an environment that permits child processes and local IPC. |
+| Scenario or template cannot be found | Run CLI commands from the repository root. The desktop launcher changes to that root automatically. |
+| Project changes disappear after closing | Save deployed changes with **Save project**. Session project slots and undeployed editor drafts are not durable project files. |
+
+## Optional browser showcase
+
+The browser UI uses a Python standard-library adapter backed by `vclab --realtime`. Each launch starts an independent native experiment; it does not attach to an already running desktop. No npm packages, Qt, Assimp, or Docker are needed for the browser-only setup.
+
+### Build and launch
+
+Install the compiler, CMake, and Python, then build the headless engine:
+
+```sh
+sudo apt-get update
+sudo apt-get install -y build-essential cmake python3
+cmake -S . -B build/headless -DCMAKE_BUILD_TYPE=Release \
+  -DVEHICLE_LAB_DESKTOP=OFF -DBUILD_TESTING=OFF
+cmake --build build/headless -j2
+bash tools/run_web_showcase.sh --runtime "$PWD/build/headless/vclab"
+```
+
+If you already built the desktop in `build/native`, reuse its engine with `bash tools/run_web_showcase.sh`.
+
+Open **http://127.0.0.1:8080** on the same machine. The prepared following demo starts paused in Drive, with nine workers, an ego speed of 15 m/s, and an 8 m/s lead car. Press **Run simulation**. Stop the server with **Ctrl+C**. If port 8080 is occupied, append `--port 8081` and open that port instead.
+
+Explore the seven workspaces: **Vehicle workspace**, **Network control**, **CAN analyzer**, **Diagnostics**, **ECU builder**, **Performance**, and **Live signals**. Change traffic speeds and following settings, read the Motor ECU VIN in Diagnostics, or edit and deploy a runtime JSON program. Export a `.vcanproj` to preserve deployed configuration across server restarts.
+
+Custom car geometry reaches the browser through projects saved by the native desktop. Physics deployment and project switching restart the experiment; live state injections can change temperature or charge during a run.
+
+### Verify the browser client
+
+Run the HTTP integration tests against the engine you built:
+
+```sh
+VCLAB_RUNTIME="$PWD/build/headless/vclab" \
+  python3 tests/showcase/test_native_showcase.py
+```
+
+Browser verification additionally requires Node.js/npm and the pinned Playwright dependency:
+
+```sh
+npm ci --prefix showcase
+npx --prefix showcase playwright install chromium --only-shell
+VCLAB_RUNTIME="$PWD/build/headless/vclab" npm test --prefix showcase
+```
+
+Use `build/native/vclab` instead if reusing a desktop build. The suites start their own server and native workers. Browser screenshots default to `/tmp/vclab-showcase-evidence`; set `SHOWCASE_EVIDENCE` to change that directory. See the [showcase guide](showcase/README.md) for detailed controls and host-specific browser installation notes, and the [dated browser verification record](docs/verification/web.json) for previous results.
+
+The older Python controller and Compose adapters remain comparison fixtures described in the [legacy guide](docs/LEGACY_WEB.md).
+
+## Repository and documentation
+
+| Path | Purpose |
+| --- | --- |
+| `app/`, `headers/`, `src/` | Executable entry points, protocol code, and simulation engine. |
+| `native/` | Controller, worker transport, runtime contracts, and Qt desktop. |
+| `showcase/` | Browser interface and Python HTTP/static adapter. |
+| `resources/` | ECU definitions, scenarios, schemas, example projects, and vehicle assets. |
+| `tests/` | Protocol, runtime, desktop, and development-tool regressions. |
+| `tools/` | Launchers, dependency helpers, and development tools. |
+| `docs/` | Architecture, user guides, screenshots, and verification records. |
+| `coordination/` | Roadmap, decisions, task records, and source provenance. |
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Physics, controls, and model equations](native/PHYSICS.md)
+- [Platform status](docs/PLATFORM_STATUS.md) and [recorded native verification](docs/verification/native.json)
+- [Remaining roadmap](coordination/NATIVE_CPP_ROADMAP.md)
+- [Default vehicle asset provenance and CC0 notice](resources/models/default-car/PROVENANCE.md)
+
+## Scope and current limits
+
+The vehicle model is educational and planar. The 3D view visualizes that model; custom meshes do not change collision geometry or physical parameters. Contacts use rectangular footprints, and body pitch/roll are visual cues. Hardware budgets are modeled values rather than calibrated MCU measurements.
+
+Full durable recording/replay, external esmini/CARLA integration, path tracking/MPC, and standalone installers remain roadmap items. The repository's dated verification records describe previous runs; use the commands above to validate your own build.

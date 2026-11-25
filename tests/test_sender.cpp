@@ -1,23 +1,12 @@
 #include <gtest/gtest.h>
-#include "../headers/Sender.hpp"
-#include "../headers/CanTp.hpp"
-#include "../headers/CanBus.hpp"
-
-TEST(SenderTest, BasicFunctionality)
-{
-    Sender sender("TestSender", true);
-    CanBus bus;
-    CanTp tp(0x700, 0x700, bus);
-
-    EXPECT_EQ(sender.getEcuName(), "TestSender");
-    EXPECT_TRUE(sender.isAvailable());
-
-    // Test send functionality
-    testing::internal::CaptureStdout();
-    std::string msg = "Hello";
-    sender.sendEcuData(msg, tp);
-    std::string output = testing::internal::GetCapturedStdout();
-
-    EXPECT_NE(output.find("Sending data from Sender ECU: TestSender"), std::string::npos);
-    EXPECT_NE(output.find("ECU is available. Sent data: Hello"), std::string::npos);
+#include "Sender.hpp"
+#include "CanTp.hpp"
+TEST(SenderTest, AvailableSenderUsesTransport) {
+    Sender sender("TestSender",true);
+    CanBus a(CanBus::Backend::Internal,"sender"),b(CanBus::Backend::Internal,"sender");a.init();b.init();
+    CanTp tx(0x700,0x708,a),rx(0x708,0x700,b);
+    std::string message="Hello";sender.sendEcuData(message,tx);
+    EXPECT_EQ(rx.receiveMessage(),message);
+    sender.setAvailability(false);sender.sendEcuData(message,tx);
+    Can frame;EXPECT_FALSE(b.receive(frame,std::chrono::milliseconds(0)));
 }

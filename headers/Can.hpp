@@ -10,6 +10,9 @@ public:
     Can();
     Can(uint32_t id, const std::vector<uint8_t> &data);
     void print();
+    void setFd(bool fd, bool brs = false) { fd_ = fd; brs_ = fd && brs; }
+    bool isFd() const { return fd_; }
+    bool bitrateSwitch() const { return brs_; }
     void setFrameType(bool extended) { extendedFrame_ = extended; }
     bool isExtendedFrame() const { return extendedFrame_; }
     void setId(uint32_t id) { id_ = id; }
@@ -26,7 +29,7 @@ public:
     }
 
 private:
-    bool extendedFrame_ = false;
+    bool extendedFrame_ = false, fd_ = false, brs_ = false;
     uint32_t id_ = 0;
     std::vector<uint8_t> data_;
 };

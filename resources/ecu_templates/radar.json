@@ -1,0 +1,476 @@
+{
+  "schema_version": 1,
+  "name": "Radar ECU",
+  "inputs": [
+    "ignition",
+    "radar_distance_sensor",
+    "closing_speed_sensor",
+    "static_object_sensor",
+    "speed_sensor"
+  ],
+  "variables": {
+    "obj0_range": 120,
+    "obj0_closing_speed": 0,
+    "obj0_confidence": 100,
+    "obj0_valid": 1,
+    "obj1_range": 150,
+    "obj1_closing_speed": 0,
+    "obj1_confidence": 100,
+    "obj1_valid": 1,
+    "obj2_range": 0,
+    "obj2_closing_speed": 0,
+    "obj2_confidence": 0,
+    "obj2_valid": 0,
+    "obj3_range": 0,
+    "obj3_closing_speed": 0,
+    "obj3_confidence": 0,
+    "obj3_valid": 0,
+    "object_count": 0,
+    "sample_counter": 0,
+    "radar_valid": 1,
+    "radar_fault": 0
+  },
+  "tasks": [
+    {
+      "name": "radar_sampling",
+      "period_ms": 10,
+      "cost_us": 220,
+      "assign": {
+        "obj0_range": "radar_distance_sensor",
+        "obj0_closing_speed": "closing_speed_sensor",
+        "obj1_range": "static_object_sensor",
+        "obj1_closing_speed": "speed_sensor",
+        "radar_fault": {
+          "op": "or",
+          "args": [
+            {
+              "op": "gt",
+              "args": [
+                "radar_distance_sensor",
+                600
+              ]
+            },
+            {
+              "op": "lt",
+              "args": [
+                "radar_distance_sensor",
+                0
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "radar_validity",
+      "period_ms": 10,
+      "cost_us": 200,
+      "assign": {
+        "obj0_valid": {
+          "op": "eq",
+          "args": [
+            "radar_fault",
+            0
+          ]
+        },
+        "obj0_confidence": {
+          "op": "if",
+          "args": [
+            "radar_fault",
+            0,
+            100
+          ]
+        },
+        "obj1_valid": {
+          "op": "lt",
+          "args": [
+            "static_object_sensor",
+            500
+          ]
+        },
+        "obj1_confidence": {
+          "op": "if",
+          "args": [
+            {
+              "op": "lt",
+              "args": [
+                "static_object_sensor",
+                500
+              ]
+            },
+            100,
+            0
+          ]
+        },
+        "radar_valid": {
+          "op": "eq",
+          "args": [
+            "radar_fault",
+            0
+          ]
+        },
+        "object_count": {
+          "op": "add",
+          "args": [
+            {
+              "op": "eq",
+              "args": [
+                "radar_fault",
+                0
+              ]
+            },
+            {
+              "op": "lt",
+              "args": [
+                "static_object_sensor",
+                500
+              ]
+            }
+          ]
+        },
+        "sample_counter": {
+          "op": "if",
+          "args": [
+            {
+              "op": "gt",
+              "args": [
+                "sample_counter",
+                254
+              ]
+            },
+            0,
+            {
+              "op": "add",
+              "args": [
+                "sample_counter",
+                1
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "bindings": {},
+  "messages": [
+    {
+      "name": "RadarObjectList",
+      "id": 1024,
+      "direction": "tx",
+      "period_ms": 20,
+      "dlc": 32,
+      "fd": true,
+      "brs": true,
+      "bus": "adas",
+      "signals": [
+        {
+          "name": "object_count",
+          "start": 0,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 4,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "sample_counter",
+          "start": 8,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 255,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "radar_valid",
+          "start": 16,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj0_range",
+          "start": 24,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj0_closing_speed",
+          "start": 40,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj0_confidence",
+          "start": 56,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj0_valid",
+          "start": 64,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_range",
+          "start": 80,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_closing_speed",
+          "start": 96,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_confidence",
+          "start": 112,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_valid",
+          "start": 120,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_range",
+          "start": 136,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_closing_speed",
+          "start": 152,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_confidence",
+          "start": 168,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_valid",
+          "start": 176,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_range",
+          "start": 192,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_closing_speed",
+          "start": 208,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_confidence",
+          "start": 224,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_valid",
+          "start": 232,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ]
+    }
+  ],
+  "state_machine": {
+    "initial": "OFF",
+    "states": [
+      "OFF",
+      "RUN",
+      "FAULT"
+    ],
+    "transitions": [
+      {
+        "from": "OFF",
+        "to": "RUN",
+        "when": "ignition"
+      },
+      {
+        "from": "RUN",
+        "to": "FAULT",
+        "when": "radar_fault"
+      },
+      {
+        "from": "FAULT",
+        "to": "RUN",
+        "when": {
+          "op": "eq",
+          "args": [
+            "radar_fault",
+            0
+          ]
+        }
+      },
+      {
+        "from": "RUN",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "dtcs": [
+    {
+      "code": "C1A10",
+      "uds_code": 12689664,
+      "name": "Forward radar unavailable",
+      "severity": "warning",
+      "trigger": "radar_fault",
+      "recover": {
+        "op": "eq",
+        "args": [
+          "radar_fault",
+          0
+        ]
+      }
+    }
+  ],
+  "assumptions": [
+    "Functional software-in-the-loop demonstration; not production ADAS/ADS.",
+    "Radar observations are synthetic sensor measurements, not raw camera/radar perception.",
+    "The object list carries four slots; slots 0 (lead vehicle) and 1 (static obstacle) are populated."
+  ],
+  "hardware": {
+    "cpu_mhz": 160,
+    "ram_kib": 128,
+    "flash_kib": 512,
+    "task_budget_us": 8000,
+    "adc": {
+      "resolution_bits": 12,
+      "channels": {}
+    },
+    "can_controller": {
+      "fd_capable": true,
+      "rx_fifo_frames": 128
+    },
+    "gpio_outputs": []
+  },
+  "domain": "Perception"
+}

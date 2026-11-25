@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "updated": "2026-11-03",
+  "product_branch": "platform/native",
+  "web_branch": "showcase/web",
+  "entries": [
+    {
+      "task": "PLANT-00",
+      "status": "done",
+      "basis": "User-requested manual reconciliation of the verified native delivery; no independent-review claim.",
+      "evidence": [
+        "docs/PLATFORM_STATUS.md",
+        "docs/verification/native.json",
+        "resources/projects/following_demo.vcanproj"
+      ],
+      "source_commit": "a3ff3a47b804831ad6cfe9267301f4aebc88942e"
+    },
+    {
+      "task": "UI-BOOT-00",
+      "status": "done",
+      "basis": "User-requested manual reconciliation of the verified native delivery; no independent-review claim.",
+      "evidence": [
+        "docs/PLATFORM_STATUS.md",
+        "docs/verification/native.json",
+        "resources/projects/following_demo.vcanproj"
+      ],
+      "source_commit": "a3ff3a47b804831ad6cfe9267301f4aebc88942e"
+    },
+    {
+      "task": "UI-01",
+      "status": "done",
+      "basis": "User-requested manual reconciliation of the verified native delivery; no independent-review claim.",
+      "evidence": [
+        "docs/PLATFORM_STATUS.md",
+        "docs/verification/native.json",
+        "resources/projects/following_demo.vcanproj"
+      ],
+      "dependency_note": "UI panels/run files are delivered with sampled telemetry. Full durable runtime recording remains LOG-00; dependency sequence is superseded for this delivered UI slice.",
+      "source_commit": "a3ff3a47b804831ad6cfe9267301f4aebc88942e"
+    },
+    {
+      "task": "NATIVE-LAB-01",
+      "status": "done",
+      "basis": "User-requested manual reconciliation of the verified native delivery; no independent-review claim.",
+      "evidence": [
+        "docs/PLATFORM_STATUS.md",
+        "docs/verification/native.json",
+        "resources/projects/following_demo.vcanproj"
+      ],
+      "source_commit": "a3ff3a47b804831ad6cfe9267301f4aebc88942e"
+    },
+    {
+      "task": "WEB-00",
+      "status": "done",
+      "basis": "User-requested manual delivery reconciliation; verified behavior, no independent-review claim.",
+      "source_commit": "9219550bf5243e07596afc31f420e7c1e99a60b0",
+      "evidence": [
+        "docs/PLATFORM_STATUS.md",
+        "docs/verification/native.json",
+        "docs/verification/web.json",
+        "coordination/cleanup.json"
+      ],
+      "dependency_note": "Delivered early against the user-requested native platform; broader DEMO-00 external-world/MPC/replay release dependencies remain open. See ADR-002."
+    },
+    {
+      "task": "CLEAN-00",
+      "status": "done",
+      "basis": "User-requested manual delivery reconciliation; verified behavior, no independent-review claim.",
+      "source_commit": "a3ff3a47b804831ad6cfe9267301f4aebc88942e",
+      "evidence": [
+        "docs/PLATFORM_STATUS.md",
+        "docs/verification/native.json",
+        "docs/verification/web.json",
+        "coordination/cleanup.json"
+      ],
+      "dependency_note": "Delivered early against the user-requested native platform; broader DEMO-00 external-world/MPC/replay release dependencies remain open. See ADR-002."
+    }
+  ],
+  "open_scope": [
+    "PROJECT-00: Empty-project creation and wider persisted profiles remain open.",
+    "LOG-00/REPLAY-00: full runtime event recording and deterministic replay remain open.",
+    "WORLD-00/WORLD-01/WORLD-02/CARLA-00: external world/typed backend gates remain open.",
+    "TRACK-00/MPC-00: path tracking and constrained MPC remain open.",
+    "VERIFY-00/CONTAINER-NATIVE-00/PACKAGE-00/TOOLCHAIN-00: retain unmet execution/review/release criteria.",
+    "CLI-IO-00/IMPORT-ATOMIC-00/DIAG-00/ISOTP-EXT-00: preserved candidates are not implicitly integrated."
+  ],
+  "native_source_commit": "a3ff3a47b804831ad6cfe9267301f4aebc88942e",
+  "web_source_commit": "9219550bf5243e07596afc31f420e7c1e99a60b0"
+}

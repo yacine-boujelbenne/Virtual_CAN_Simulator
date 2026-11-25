@@ -1,0 +1,74 @@
+name: Verify distributed ECU laboratory
+on:
+  push:
+    branches: [feature, master, main]
+  pull_request:
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install genuine native test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ make libgtest-dev python3-jsonschema
+      - name: Configure full native and P0 baseline
+        run: cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release -DVEHICLE_LAB_P0_TESTS=ON
+      - name: Build controller, workers and GoogleTest cases
+        run: cmake --build build/native -j2
+      - name: Run named CTest cases and strict P0 regressions
+        run: |
+          ctest --test-dir build/native --output-on-failure --no-tests=error
+          python3 tools/check_baseline.py --verify-p0
+      - name: Save native test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-ctest-results
+          path: build/native/Testing/
+      - name: Build ECU and controller images (includes C++ tests)
+        run: docker compose build
+      - name: Start all nine containers
+        run: docker compose up -d --wait --wait-timeout 180
+      - name: Verify distinct ECU container identities
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          services = ["ecu-motor","ecu-abs","ecu-bms","ecu-dynamics","ecu-cluster","ecu-radar","ecu-adas","ecu-reserve","simulator"]
+          ids = [subprocess.check_output(["docker","compose","ps","-q",name], text=True).strip() for name in services]
+          assert all(ids) and len(set(ids)) == 9, ids
+          print("Verified nine distinct containers")
+          PY
+      - name: HTTP application integration
+        env:
+          TEST_URL: http://127.0.0.1:8080
+        run: |
+          python3 tests/run_regressions.py test_web test_project_ab.ProjectHttp
+      - name: Distributed ECU and failure integration
+        run: python3 tests/run_regressions.py test_distributed
+      - name: Actual worker-container stop and recovery
+        run: |
+          docker compose stop ecu-motor
+          python3 tests/test_container_failure.py
+          docker compose start ecu-motor
+          python3 - <<'PY'
+          import json, time, urllib.request
+          for _ in range(30):
+              try:
+                  req=urllib.request.Request("http://127.0.0.1:8080/api/command",json.dumps({"action":"reset"}).encode(),headers={"Content-Type":"application/json"})
+                  with urllib.request.urlopen(req,timeout=10) as response:
+                      state=json.load(response)
+                      assert state["cluster"]["connected"] == 7
+                  print("Restarted worker and reset the shared epoch"); break
+              except Exception: time.sleep(.5)
+          else: raise RuntimeError("Worker recovery failed")
+          PY
+      - name: Container status and logs
+        if: always()
+        run: |
+          docker compose ps
+          docker compose logs --tail=80
+      - name: Stop
+        if: always()
+        run: docker compose down

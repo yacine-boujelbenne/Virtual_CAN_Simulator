@@ -1,0 +1,38 @@
+{
+  "name": "sequential_transfers",
+  "description": "The transmitter is released as soon as the last consecutive frame of a payload is sent: a second multi frame transfer on the same session is accepted.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 4,
+    "stmin": 0
+  },
+  "steps": [
+    {"actor": "a", "action": "send",
+     "payload": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021",
+     "frames": ["1022000102030405"]},
+    {"actor": "b", "action": "receive", "frame": "1022000102030405", "frames": ["300400"]},
+    {"actor": "a", "action": "receive", "frame": "300400",
+     "frames": ["21060708090a0b0c", "220d0e0f10111213", "231415161718191a", "241b1c1d1e1f2021"]},
+    {"actor": "b", "action": "receive", "frame": "21060708090a0b0c", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "220d0e0f10111213", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "231415161718191a", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "241b1c1d1e1f2021", "frames": []},
+    {"actor": "b", "action": "message",
+     "value": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021"},
+    {"actor": "a", "action": "send",
+     "payload": "a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1",
+     "frames": ["1022a0a1a2a3a4a5"]},
+    {"actor": "b", "action": "receive", "frame": "1022a0a1a2a3a4a5", "frames": ["300400"]},
+    {"actor": "a", "action": "receive", "frame": "300400",
+     "frames": ["21a6a7a8a9aaabac", "22adaeafb0b1b2b3", "23b4b5b6b7b8b9ba", "24bbbcbdbebfc0c1"]},
+    {"actor": "b", "action": "receive", "frame": "21a6a7a8a9aaabac", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "22adaeafb0b1b2b3", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "23b4b5b6b7b8b9ba", "frames": []},
+    {"actor": "b", "action": "receive", "frame": "24bbbcbdbebfc0c1", "frames": []},
+    {"actor": "b", "action": "message",
+     "value": "a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1"}
+  ]
+}

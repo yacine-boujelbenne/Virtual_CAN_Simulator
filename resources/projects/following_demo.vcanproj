@@ -1,0 +1,4773 @@
+{
+  "can_map": [
+    {
+      "bus": "powertrain",
+      "direction": "tx",
+      "dlc": 8,
+      "ecu": "Motor ECU",
+      "fd": false,
+      "id": 256,
+      "message": "MotorStatus",
+      "period_ms": 20,
+      "signals": [
+        {
+          "factor": 0.25,
+          "length": 16,
+          "name": "motor_rpm",
+          "offset": 0.0,
+          "start": 0,
+          "unit": "rpm"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "motor_temperature",
+          "offset": -40.0,
+          "start": 16,
+          "unit": "°C"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "motor_torque",
+          "offset": 0.0,
+          "start": 32,
+          "unit": "Nm"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "motor_fault",
+          "offset": 0.0,
+          "start": 48,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "Motor ECU",
+      "fd": false,
+      "id": 784,
+      "message": "BatteryStatus",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "battery_soc",
+          "offset": 0.0,
+          "start": 0,
+          "unit": "%"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "pack_voltage",
+          "offset": 0.0,
+          "start": 16,
+          "unit": "V"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "pack_current",
+          "offset": 0.0,
+          "start": 32,
+          "unit": "A"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "battery_fault",
+          "offset": 0.0,
+          "start": 48,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "power_permit",
+          "offset": 0.0,
+          "start": 49,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "Motor ECU",
+      "fd": false,
+      "id": 1104,
+      "message": "ADASControl",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "aeb_request",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        },
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "acc_throttle",
+          "offset": 0.0,
+          "start": 16,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "acc_active",
+          "offset": 0.0,
+          "start": 32,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "fcw",
+          "offset": 0.0,
+          "start": 33,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "time_to_collision",
+          "offset": 0.0,
+          "start": 40,
+          "unit": "s"
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "Motor ECU",
+      "fd": false,
+      "id": 608,
+      "message": "DriveStatus",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "drive_permit",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "tx",
+      "dlc": 8,
+      "ecu": "ABS ECU",
+      "fd": false,
+      "id": 544,
+      "message": "BrakeStatus",
+      "period_ms": 20,
+      "signals": [
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "abs_active",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        },
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "pressure",
+          "offset": 0.0,
+          "start": 8,
+          "unit": "ratio"
+        },
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "wheel_slip",
+          "offset": 0.0,
+          "start": 24,
+          "unit": "ratio"
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "ABS ECU",
+      "fd": false,
+      "id": 1104,
+      "message": "ADASControl",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "aeb_request",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        },
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "acc_throttle",
+          "offset": 0.0,
+          "start": 16,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "acc_active",
+          "offset": 0.0,
+          "start": 32,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "fcw",
+          "offset": 0.0,
+          "start": 33,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "time_to_collision",
+          "offset": 0.0,
+          "start": 40,
+          "unit": "s"
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "tx",
+      "dlc": 8,
+      "ecu": "BMS ECU",
+      "fd": false,
+      "id": 784,
+      "message": "BatteryStatus",
+      "period_ms": 100,
+      "signals": [
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "battery_soc",
+          "offset": 0.0,
+          "start": 0,
+          "unit": "%"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "pack_voltage",
+          "offset": 0.0,
+          "start": 16,
+          "unit": "V"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "pack_current",
+          "offset": 0.0,
+          "start": 32,
+          "unit": "A"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "battery_fault",
+          "offset": 0.0,
+          "start": 48,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "power_permit",
+          "offset": 0.0,
+          "start": 49,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "tx",
+      "dlc": 8,
+      "ecu": "Dynamics ECU",
+      "fd": false,
+      "id": 288,
+      "message": "VehicleStatus",
+      "period_ms": 20,
+      "signals": [
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "vehicle_speed",
+          "offset": 0.0,
+          "start": 0,
+          "unit": "km/h"
+        },
+        {
+          "factor": 0.25,
+          "length": 16,
+          "name": "vehicle_rpm",
+          "offset": 0.0,
+          "start": 16,
+          "unit": "rpm"
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "Instrument Cluster",
+      "fd": false,
+      "id": 288,
+      "message": "VehicleStatus",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "vehicle_speed",
+          "offset": 0.0,
+          "start": 0,
+          "unit": "km/h"
+        },
+        {
+          "factor": 0.25,
+          "length": 16,
+          "name": "vehicle_rpm",
+          "offset": 0.0,
+          "start": 16,
+          "unit": "rpm"
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "Instrument Cluster",
+      "fd": false,
+      "id": 256,
+      "message": "MotorStatus",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 0.25,
+          "length": 16,
+          "name": "motor_rpm",
+          "offset": 0.0,
+          "start": 0,
+          "unit": "rpm"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "motor_temperature",
+          "offset": -40.0,
+          "start": 16,
+          "unit": "°C"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "motor_torque",
+          "offset": 0.0,
+          "start": 32,
+          "unit": "Nm"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "motor_fault",
+          "offset": 0.0,
+          "start": 48,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "Instrument Cluster",
+      "fd": false,
+      "id": 784,
+      "message": "BatteryStatus",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "battery_soc",
+          "offset": 0.0,
+          "start": 0,
+          "unit": "%"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "pack_voltage",
+          "offset": 0.0,
+          "start": 16,
+          "unit": "V"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "pack_current",
+          "offset": 0.0,
+          "start": 32,
+          "unit": "A"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "battery_fault",
+          "offset": 0.0,
+          "start": 48,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "power_permit",
+          "offset": 0.0,
+          "start": 49,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "Instrument Cluster",
+      "fd": false,
+      "id": 544,
+      "message": "BrakeStatus",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "abs_active",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        },
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "pressure",
+          "offset": 0.0,
+          "start": 8,
+          "unit": "ratio"
+        },
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "wheel_slip",
+          "offset": 0.0,
+          "start": 24,
+          "unit": "ratio"
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "Instrument Cluster",
+      "fd": false,
+      "id": 1104,
+      "message": "ADASControl",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "aeb_request",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        },
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "acc_throttle",
+          "offset": 0.0,
+          "start": 16,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "acc_active",
+          "offset": 0.0,
+          "start": 32,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "fcw",
+          "offset": 0.0,
+          "start": 33,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "time_to_collision",
+          "offset": 0.0,
+          "start": 40,
+          "unit": "s"
+        }
+      ]
+    },
+    {
+      "bus": "adas",
+      "direction": "tx",
+      "dlc": 32,
+      "ecu": "Radar ECU",
+      "fd": true,
+      "id": 1024,
+      "message": "RadarObjectList",
+      "period_ms": 20,
+      "signals": [
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "object_count",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "sample_counter",
+          "offset": 0.0,
+          "start": 8,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "radar_valid",
+          "offset": 0.0,
+          "start": 16,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj0_range",
+          "offset": 0.0,
+          "start": 24,
+          "unit": "m"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj0_closing_speed",
+          "offset": 0.0,
+          "start": 40,
+          "unit": "m/s"
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "obj0_confidence",
+          "offset": 0.0,
+          "start": 56,
+          "unit": "%"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "obj0_valid",
+          "offset": 0.0,
+          "start": 64,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj1_range",
+          "offset": 0.0,
+          "start": 80,
+          "unit": "m"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj1_closing_speed",
+          "offset": 0.0,
+          "start": 96,
+          "unit": "m/s"
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "obj1_confidence",
+          "offset": 0.0,
+          "start": 112,
+          "unit": "%"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "obj1_valid",
+          "offset": 0.0,
+          "start": 120,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj2_range",
+          "offset": 0.0,
+          "start": 136,
+          "unit": "m"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj2_closing_speed",
+          "offset": 0.0,
+          "start": 152,
+          "unit": "m/s"
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "obj2_confidence",
+          "offset": 0.0,
+          "start": 168,
+          "unit": "%"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "obj2_valid",
+          "offset": 0.0,
+          "start": 176,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj3_range",
+          "offset": 0.0,
+          "start": 192,
+          "unit": "m"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj3_closing_speed",
+          "offset": 0.0,
+          "start": 208,
+          "unit": "m/s"
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "obj3_confidence",
+          "offset": 0.0,
+          "start": 224,
+          "unit": "%"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "obj3_valid",
+          "offset": 0.0,
+          "start": 232,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "bus": "adas",
+      "direction": "rx",
+      "dlc": 32,
+      "ecu": "ADAS ECU",
+      "fd": true,
+      "id": 1024,
+      "message": "RadarObjectList",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "object_count",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "sample_counter",
+          "offset": 0.0,
+          "start": 8,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "radar_valid",
+          "offset": 0.0,
+          "start": 16,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj0_range",
+          "offset": 0.0,
+          "start": 24,
+          "unit": "m"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj0_closing_speed",
+          "offset": 0.0,
+          "start": 40,
+          "unit": "m/s"
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "obj0_confidence",
+          "offset": 0.0,
+          "start": 56,
+          "unit": "%"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "obj0_valid",
+          "offset": 0.0,
+          "start": 64,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj1_range",
+          "offset": 0.0,
+          "start": 80,
+          "unit": "m"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj1_closing_speed",
+          "offset": 0.0,
+          "start": 96,
+          "unit": "m/s"
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "obj1_confidence",
+          "offset": 0.0,
+          "start": 112,
+          "unit": "%"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "obj1_valid",
+          "offset": 0.0,
+          "start": 120,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj2_range",
+          "offset": 0.0,
+          "start": 136,
+          "unit": "m"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj2_closing_speed",
+          "offset": 0.0,
+          "start": 152,
+          "unit": "m/s"
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "obj2_confidence",
+          "offset": 0.0,
+          "start": 168,
+          "unit": "%"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "obj2_valid",
+          "offset": 0.0,
+          "start": 176,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj3_range",
+          "offset": 0.0,
+          "start": 192,
+          "unit": "m"
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "obj3_closing_speed",
+          "offset": 0.0,
+          "start": 208,
+          "unit": "m/s"
+        },
+        {
+          "factor": 1.0,
+          "length": 8,
+          "name": "obj3_confidence",
+          "offset": 0.0,
+          "start": 224,
+          "unit": "%"
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "obj3_valid",
+          "offset": 0.0,
+          "start": 232,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "bus": "adas",
+      "direction": "rx",
+      "dlc": 8,
+      "ecu": "ADAS ECU",
+      "fd": false,
+      "id": 288,
+      "message": "VehicleStatus",
+      "period_ms": 0,
+      "signals": [
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "vehicle_speed",
+          "offset": 0.0,
+          "start": 0,
+          "unit": "km/h"
+        },
+        {
+          "factor": 0.25,
+          "length": 16,
+          "name": "vehicle_rpm",
+          "offset": 0.0,
+          "start": 16,
+          "unit": "rpm"
+        }
+      ]
+    },
+    {
+      "bus": "adas",
+      "direction": "tx",
+      "dlc": 8,
+      "ecu": "ADAS ECU",
+      "fd": false,
+      "id": 1104,
+      "message": "ADASControl",
+      "period_ms": 10,
+      "signals": [
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "aeb_request",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        },
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "acc_throttle",
+          "offset": 0.0,
+          "start": 16,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "acc_active",
+          "offset": 0.0,
+          "start": 32,
+          "unit": ""
+        },
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "fcw",
+          "offset": 0.0,
+          "start": 33,
+          "unit": ""
+        },
+        {
+          "factor": 0.01,
+          "length": 16,
+          "name": "time_to_collision",
+          "offset": 0.0,
+          "start": 40,
+          "unit": "s"
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "tx",
+      "dlc": 8,
+      "ecu": "EPS ECU",
+      "fd": false,
+      "id": 610,
+      "message": "EPSStatus",
+      "period_ms": 20,
+      "signals": [
+        {
+          "factor": 0.0001,
+          "length": 16,
+          "name": "steering_angle",
+          "offset": 0.0,
+          "start": 0,
+          "unit": "rad"
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "tx",
+      "dlc": 8,
+      "ecu": "Transmission ECU",
+      "fd": false,
+      "id": 608,
+      "message": "DriveStatus",
+      "period_ms": 10,
+      "signals": [
+        {
+          "factor": 1.0,
+          "length": 1,
+          "name": "drive_permit",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        }
+      ]
+    },
+    {
+      "bus": "powertrain",
+      "direction": "tx",
+      "dlc": 8,
+      "ecu": "Transmission ECU",
+      "fd": false,
+      "id": 609,
+      "message": "GearStatus",
+      "period_ms": 20,
+      "signals": [
+        {
+          "factor": 1.0,
+          "length": 2,
+          "name": "gear_position",
+          "offset": 0.0,
+          "start": 0,
+          "unit": ""
+        }
+      ]
+    }
+  ],
+  "ecu_definitions": {
+    "../ecu_templates/abs.json": {
+      "assumptions": [
+        "Generic educational model; not an OEM controller.",
+        "Classic CAN, little-endian signals, 10 ms simulation step."
+      ],
+      "bindings": {
+        "brake_pressure": "pressure"
+      },
+      "domain": "Chassis",
+      "dtcs": [],
+      "hardware": {
+        "adc": {
+          "channels": {
+            "brake": [
+              0,
+              1
+            ]
+          },
+          "resolution_bits": 12
+        },
+        "can_controller": {
+          "fd_capable": true,
+          "rx_fifo_frames": 128
+        },
+        "cpu_mhz": 120,
+        "flash_kib": 512,
+        "gpio_outputs": [],
+        "ram_kib": 128,
+        "task_budget_us": 8000
+      },
+      "inputs": [
+        "ignition",
+        "brake",
+        "speed_sensor",
+        "wheel_fl_sensor",
+        "wheel_fr_sensor",
+        "wheel_rl_sensor",
+        "wheel_rr_sensor",
+        "aeb_request",
+        "acc_throttle",
+        "acc_active",
+        "fcw",
+        "time_to_collision"
+      ],
+      "messages": [
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "tx",
+          "dlc": 8,
+          "fd": false,
+          "id": 544,
+          "name": "BrakeStatus",
+          "period_ms": 20,
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "abs_active",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "pressure",
+              "offset": 0,
+              "signed": false,
+              "start": 8,
+              "unit": "ratio"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "wheel_slip",
+              "offset": 0,
+              "signed": false,
+              "start": 24,
+              "unit": "ratio"
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 1104,
+          "name": "ADASControl",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "aeb_request",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "acc_throttle",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "acc_active",
+              "offset": 0,
+              "signed": false,
+              "start": 32,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "fcw",
+              "offset": 0,
+              "signed": false,
+              "start": 33,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 99,
+              "min": 0,
+              "name": "time_to_collision",
+              "offset": 0,
+              "signed": false,
+              "start": 40,
+              "unit": "s"
+            }
+          ]
+        }
+      ],
+      "name": "ABS ECU",
+      "schema_version": 1,
+      "state_machine": {
+        "initial": "OFF",
+        "states": [
+          "OFF",
+          "RUN",
+          "ABS_ACTIVE"
+        ],
+        "transitions": [
+          {
+            "from": "OFF",
+            "to": "RUN",
+            "when": "ignition"
+          },
+          {
+            "from": "RUN",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "RUN",
+            "to": "ABS_ACTIVE",
+            "when": "abs_active"
+          },
+          {
+            "from": "ABS_ACTIVE",
+            "to": "RUN",
+            "when": {
+              "args": [
+                "abs_active",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "ABS_ACTIVE",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "assign": {
+            "combined_brake": {
+              "args": [
+                "brake",
+                "aeb_request"
+              ],
+              "op": "max"
+            }
+          },
+          "cost_us": 100,
+          "name": "brake_request_arbitration",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "wheel_slip": {
+              "args": [
+                0,
+                {
+                  "args": [
+                    {
+                      "args": [
+                        "speed_sensor",
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                "wheel_fl_sensor",
+                                "wheel_fr_sensor"
+                              ],
+                              "op": "min"
+                            },
+                            {
+                              "args": [
+                                "wheel_rl_sensor",
+                                "wheel_rr_sensor"
+                              ],
+                              "op": "min"
+                            }
+                          ],
+                          "op": "min"
+                        }
+                      ],
+                      "op": "sub"
+                    },
+                    {
+                      "args": [
+                        "speed_sensor",
+                        0.5
+                      ],
+                      "op": "max"
+                    }
+                  ],
+                  "op": "div"
+                }
+              ],
+              "op": "max"
+            }
+          },
+          "name": "slip",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "abs_active": {
+              "args": [
+                {
+                  "args": [
+                    "speed_sensor",
+                    2
+                  ],
+                  "op": "gt"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        "combined_brake",
+                        0.05
+                      ],
+                      "op": "gt"
+                    },
+                    {
+                      "args": [
+                        "wheel_slip",
+                        0.12
+                      ],
+                      "op": "gt"
+                    }
+                  ],
+                  "op": "and"
+                }
+              ],
+              "op": "and"
+            }
+          },
+          "name": "abs_control",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "pressure": {
+              "args": [
+                "abs_active",
+                {
+                  "args": [
+                    "combined_brake",
+                    0.45
+                  ],
+                  "op": "mul"
+                },
+                "combined_brake"
+              ],
+              "op": "if"
+            }
+          },
+          "name": "actuate",
+          "period_ms": 10
+        }
+      ],
+      "variables": {
+        "abs_active": 0,
+        "combined_brake": 0,
+        "pressure": 0,
+        "wheel_slip": 0
+      }
+    },
+    "../ecu_templates/adas_following.json": {
+      "assumptions": [
+        "Functional software-in-the-loop demonstration; not production ADAS/ADS.",
+        "Radar observations are synthetic sensor measurements, not raw camera/radar perception.",
+        "Perception fusion cross-checks the radar object against an independent range measurement; a disagreement above 5 m keeps the forward-collision warning but inhibits emergency braking."
+      ],
+      "bindings": {},
+      "domain": "Assistance",
+      "dtcs": [
+        {
+          "code": "C1A50",
+          "name": "ADAS perception input unavailable",
+          "recover": {
+            "args": [
+              "adas_fault",
+              0
+            ],
+            "op": "eq"
+          },
+          "severity": "warning",
+          "trigger": "adas_fault",
+          "uds_code": 12690688
+        }
+      ],
+      "freshness_inputs": {
+        "radar_age_ms": {
+          "bus": "adas",
+          "id": 1024
+        }
+      },
+      "hardware": {
+        "adc": {
+          "channels": {},
+          "resolution_bits": 12
+        },
+        "can_controller": {
+          "fd_capable": true,
+          "rx_fifo_frames": 128
+        },
+        "cpu_mhz": 240,
+        "flash_kib": 1024,
+        "gpio_outputs": [],
+        "ram_kib": 256,
+        "task_budget_us": 8000
+      },
+      "inputs": [
+        "ignition",
+        "assist_enabled",
+        "target_speed",
+        "aeb_enabled",
+        "brake",
+        "obj0_range",
+        "obj0_closing_speed",
+        "obj0_confidence",
+        "obj0_valid",
+        "obj1_range",
+        "obj1_closing_speed",
+        "obj1_confidence",
+        "obj1_valid",
+        "obj2_range",
+        "obj2_closing_speed",
+        "obj2_confidence",
+        "obj2_valid",
+        "obj3_range",
+        "obj3_closing_speed",
+        "obj3_confidence",
+        "obj3_valid",
+        "radar_valid",
+        "object_count",
+        "sample_counter",
+        "vehicle_speed",
+        "vehicle_rpm",
+        "radar_age_ms",
+        "front_perception_sensor",
+        "following_time_s",
+        "following_gap_m",
+        "following_gain"
+      ],
+      "messages": [
+        {
+          "brs": true,
+          "bus": "adas",
+          "direction": "rx",
+          "dlc": 32,
+          "fd": true,
+          "id": 1024,
+          "name": "RadarObjectList",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 4,
+              "min": 0,
+              "name": "object_count",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 255,
+              "min": 0,
+              "name": "sample_counter",
+              "offset": 0,
+              "signed": false,
+              "start": 8,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "radar_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "obj0_range",
+              "offset": 0,
+              "signed": false,
+              "start": 24,
+              "unit": "m"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 80,
+              "min": 0,
+              "name": "obj0_closing_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 40,
+              "unit": "m/s"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 100,
+              "min": 0,
+              "name": "obj0_confidence",
+              "offset": 0,
+              "signed": false,
+              "start": 56,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "obj0_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 64,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "obj1_range",
+              "offset": 0,
+              "signed": false,
+              "start": 80,
+              "unit": "m"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 80,
+              "min": 0,
+              "name": "obj1_closing_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 96,
+              "unit": "m/s"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 100,
+              "min": 0,
+              "name": "obj1_confidence",
+              "offset": 0,
+              "signed": false,
+              "start": 112,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "obj1_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 120,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "obj2_range",
+              "offset": 0,
+              "signed": false,
+              "start": 136,
+              "unit": "m"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 80,
+              "min": 0,
+              "name": "obj2_closing_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 152,
+              "unit": "m/s"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 100,
+              "min": 0,
+              "name": "obj2_confidence",
+              "offset": 0,
+              "signed": false,
+              "start": 168,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "obj2_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 176,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "obj3_range",
+              "offset": 0,
+              "signed": false,
+              "start": 192,
+              "unit": "m"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 80,
+              "min": 0,
+              "name": "obj3_closing_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 208,
+              "unit": "m/s"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 100,
+              "min": 0,
+              "name": "obj3_confidence",
+              "offset": 0,
+              "signed": false,
+              "start": 224,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "obj3_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 232,
+              "unit": ""
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "adas",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 288,
+          "name": "VehicleStatus",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 288,
+              "min": 0,
+              "name": "vehicle_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": "km/h"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.25,
+              "length": 16,
+              "max": 16000,
+              "min": 0,
+              "name": "vehicle_rpm",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "adas",
+          "direction": "tx",
+          "dlc": 8,
+          "fd": false,
+          "id": 1104,
+          "name": "ADASControl",
+          "period_ms": 10,
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "aeb_request",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "acc_throttle",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "acc_active",
+              "offset": 0,
+              "signed": false,
+              "start": 32,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "fcw",
+              "offset": 0,
+              "signed": false,
+              "start": 33,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 99,
+              "min": 0,
+              "name": "time_to_collision",
+              "offset": 0,
+              "signed": false,
+              "start": 40,
+              "unit": "s"
+            }
+          ]
+        }
+      ],
+      "name": "ADAS ECU",
+      "schema_version": 1,
+      "state_machine": {
+        "initial": "OFF",
+        "states": [
+          "OFF",
+          "MONITORING",
+          "CRUISE",
+          "WARNING",
+          "BRAKING",
+          "FAULT"
+        ],
+        "transitions": [
+          {
+            "from": "OFF",
+            "to": "MONITORING",
+            "when": "ignition"
+          },
+          {
+            "from": "MONITORING",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "CRUISE",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "WARNING",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "BRAKING",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "FAULT",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "MONITORING",
+            "to": "FAULT",
+            "when": "adas_fault"
+          },
+          {
+            "from": "CRUISE",
+            "to": "FAULT",
+            "when": "adas_fault"
+          },
+          {
+            "from": "WARNING",
+            "to": "FAULT",
+            "when": "adas_fault"
+          },
+          {
+            "from": "BRAKING",
+            "to": "FAULT",
+            "when": "adas_fault"
+          },
+          {
+            "from": "MONITORING",
+            "to": "BRAKING",
+            "when": "aeb_request"
+          },
+          {
+            "from": "CRUISE",
+            "to": "BRAKING",
+            "when": "aeb_request"
+          },
+          {
+            "from": "WARNING",
+            "to": "BRAKING",
+            "when": "aeb_request"
+          },
+          {
+            "from": "MONITORING",
+            "to": "WARNING",
+            "when": "fcw"
+          },
+          {
+            "from": "CRUISE",
+            "to": "WARNING",
+            "when": "fcw"
+          },
+          {
+            "from": "MONITORING",
+            "to": "CRUISE",
+            "when": "acc_active"
+          },
+          {
+            "from": "CRUISE",
+            "to": "MONITORING",
+            "when": {
+              "args": [
+                "acc_active",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "WARNING",
+            "to": "MONITORING",
+            "when": {
+              "args": [
+                "fcw",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "BRAKING",
+            "to": "MONITORING",
+            "when": {
+              "args": [
+                "aeb_request",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "FAULT",
+            "to": "MONITORING",
+            "when": {
+              "args": [
+                "adas_fault",
+                0
+              ],
+              "op": "eq"
+            }
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "assign": {
+            "adas_fault": {
+              "args": [
+                {
+                  "args": [
+                    "startup_ms",
+                    100
+                  ],
+                  "op": "lt"
+                },
+                0,
+                {
+                  "args": [
+                    {
+                      "args": [
+                        "radar_valid",
+                        0
+                      ],
+                      "op": "eq"
+                    },
+                    {
+                      "args": [
+                        "radar_age_ms",
+                        100
+                      ],
+                      "op": "gt"
+                    }
+                  ],
+                  "op": "or"
+                }
+              ],
+              "op": "if"
+            },
+            "perception_gap": {
+              "args": [
+                {
+                  "args": [
+                    "obj0_range",
+                    "front_perception_sensor"
+                  ],
+                  "op": "sub"
+                },
+                {
+                  "args": [
+                    "front_perception_sensor",
+                    "obj0_range"
+                  ],
+                  "op": "sub"
+                }
+              ],
+              "op": "max"
+            },
+            "startup_ms": {
+              "args": [
+                200,
+                {
+                  "args": [
+                    "startup_ms",
+                    10
+                  ],
+                  "op": "add"
+                }
+              ],
+              "op": "min"
+            },
+            "time_to_collision": {
+              "args": [
+                99,
+                {
+                  "args": [
+                    "obj0_range",
+                    {
+                      "args": [
+                        "obj0_closing_speed",
+                        0.1
+                      ],
+                      "op": "max"
+                    }
+                  ],
+                  "op": "div"
+                }
+              ],
+              "op": "min"
+            }
+          },
+          "cost_us": 450,
+          "name": "fusion",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "fusion_disagree": {
+              "args": [
+                "perception_gap",
+                5
+              ],
+              "op": "gt"
+            }
+          },
+          "cost_us": 120,
+          "name": "fusion_consistency",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "perception_valid": {
+              "args": [
+                {
+                  "args": [
+                    "radar_valid",
+                    1
+                  ],
+                  "op": "eq"
+                },
+                {
+                  "args": [
+                    "fusion_disagree",
+                    0
+                  ],
+                  "op": "eq"
+                }
+              ],
+              "op": "and"
+            }
+          },
+          "cost_us": 100,
+          "name": "perception_validity",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "aeb_request": {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "args": [
+                        "adas_fault",
+                        0
+                      ],
+                      "op": "eq"
+                    },
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            "aeb_enabled",
+                            "ignition"
+                          ],
+                          "op": "and"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                "radar_valid",
+                                "perception_valid"
+                              ],
+                              "op": "and"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    "vehicle_speed",
+                                    1
+                                  ],
+                                  "op": "gt"
+                                },
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        "time_to_collision",
+                                        2
+                                      ],
+                                      "op": "lt"
+                                    },
+                                    {
+                                      "args": [
+                                        "obj0_range",
+                                        5
+                                      ],
+                                      "op": "lt"
+                                    }
+                                  ],
+                                  "op": "or"
+                                }
+                              ],
+                              "op": "and"
+                            }
+                          ],
+                          "op": "and"
+                        }
+                      ],
+                      "op": "and"
+                    }
+                  ],
+                  "op": "and"
+                },
+                1,
+                0
+              ],
+              "op": "if"
+            },
+            "fcw": {
+              "args": [
+                {
+                  "args": [
+                    "adas_fault",
+                    0
+                  ],
+                  "op": "eq"
+                },
+                {
+                  "args": [
+                    "radar_valid",
+                    {
+                      "args": [
+                        "time_to_collision",
+                        3
+                      ],
+                      "op": "lt"
+                    }
+                  ],
+                  "op": "and"
+                }
+              ],
+              "op": "and"
+            }
+          },
+          "cost_us": 180,
+          "name": "collision_warning",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "acc_active": {
+              "args": [
+                {
+                  "args": [
+                    "assist_enabled",
+                    "ignition"
+                  ],
+                  "op": "and"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        "adas_fault",
+                        0
+                      ],
+                      "op": "eq"
+                    },
+                    {
+                      "args": [
+                        "brake",
+                        0
+                      ],
+                      "op": "eq"
+                    }
+                  ],
+                  "op": "and"
+                }
+              ],
+              "op": "and"
+            },
+            "acc_throttle": {
+              "args": [
+                {
+                  "args": [
+                    "obj0_range",
+                    {
+                      "args": [
+                        6,
+                        {
+                          "args": [
+                            "vehicle_speed",
+                            0.42
+                          ],
+                          "op": "mul"
+                        }
+                      ],
+                      "op": "add"
+                    }
+                  ],
+                  "op": "gt"
+                },
+                {
+                  "args": [
+                    0.7,
+                    {
+                      "args": [
+                        0,
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                "target_speed",
+                                "vehicle_speed"
+                              ],
+                              "op": "sub"
+                            },
+                            0.018
+                          ],
+                          "op": "mul"
+                        }
+                      ],
+                      "op": "max"
+                    }
+                  ],
+                  "op": "min"
+                },
+                0
+              ],
+              "op": "if"
+            }
+          },
+          "cost_us": 350,
+          "name": "cruise_control",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "following_target_kph": {
+              "args": [
+                "target_speed",
+                {
+                  "args": [
+                    3.6,
+                    {
+                      "args": [
+                        0,
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                0,
+                                {
+                                  "args": [
+                                    {
+                                      "args": [
+                                        "vehicle_speed",
+                                        3.6
+                                      ],
+                                      "op": "div"
+                                    },
+                                    "obj0_closing_speed"
+                                  ],
+                                  "op": "sub"
+                                }
+                              ],
+                              "op": "max"
+                            },
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    "obj0_range",
+                                    {
+                                      "args": [
+                                        "following_gap_m",
+                                        {
+                                          "args": [
+                                            {
+                                              "args": [
+                                                "vehicle_speed",
+                                                3.6
+                                              ],
+                                              "op": "div"
+                                            },
+                                            "following_time_s"
+                                          ],
+                                          "op": "mul"
+                                        }
+                                      ],
+                                      "op": "add"
+                                    }
+                                  ],
+                                  "op": "sub"
+                                },
+                                "following_gain"
+                              ],
+                              "op": "mul"
+                            }
+                          ],
+                          "op": "add"
+                        }
+                      ],
+                      "op": "max"
+                    }
+                  ],
+                  "op": "mul"
+                }
+              ],
+              "op": "min"
+            }
+          },
+          "cost_us": 80,
+          "name": "following_target",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "following_error_kph": {
+              "args": [
+                "following_target_kph",
+                "vehicle_speed"
+              ],
+              "op": "sub"
+            }
+          },
+          "cost_us": 60,
+          "name": "following_error",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "acc_throttle": {
+              "args": [
+                "acc_active",
+                {
+                  "args": [
+                    0.7,
+                    {
+                      "args": [
+                        0,
+                        {
+                          "args": [
+                            "following_error_kph",
+                            0.03
+                          ],
+                          "op": "mul"
+                        }
+                      ],
+                      "op": "max"
+                    }
+                  ],
+                  "op": "min"
+                },
+                0
+              ],
+              "op": "if"
+            },
+            "following_brake": {
+              "args": [
+                "acc_active",
+                {
+                  "args": [
+                    0.8,
+                    {
+                      "args": [
+                        0,
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                0,
+                                "following_error_kph"
+                              ],
+                              "op": "sub"
+                            },
+                            0.035
+                          ],
+                          "op": "mul"
+                        }
+                      ],
+                      "op": "max"
+                    }
+                  ],
+                  "op": "min"
+                },
+                0
+              ],
+              "op": "if"
+            }
+          },
+          "cost_us": 90,
+          "name": "following_actuation",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "aeb_request": {
+              "args": [
+                "aeb_request",
+                "following_brake"
+              ],
+              "op": "max"
+            }
+          },
+          "cost_us": 40,
+          "name": "following_brake_arbitration",
+          "period_ms": 10
+        }
+      ],
+      "variables": {
+        "acc_active": 0,
+        "acc_throttle": 0,
+        "adas_fault": 0,
+        "aeb_request": 0,
+        "fcw": 0,
+        "following_brake": 0,
+        "following_error_kph": 0,
+        "following_target_kph": 0,
+        "fusion_disagree": 0,
+        "perception_gap": 99,
+        "perception_valid": 0,
+        "startup_ms": 0,
+        "time_to_collision": 99
+      }
+    },
+    "../ecu_templates/bms.json": {
+      "assumptions": [
+        "Generic educational model; not an OEM controller.",
+        "Classic CAN, little-endian signals, 10 ms simulation step."
+      ],
+      "bindings": {
+        "power_allowed": "power_permit"
+      },
+      "domain": "Energy",
+      "dtcs": [
+        {
+          "code": "P0A7E",
+          "name": "Battery overtemperature",
+          "recover": {
+            "args": [
+              "battery_temperature_sensor",
+              55
+            ],
+            "op": "lt"
+          },
+          "severity": "critical",
+          "trigger": {
+            "args": [
+              "battery_temperature_sensor",
+              60
+            ],
+            "op": "gt"
+          },
+          "uds_code": 687616
+        },
+        {
+          "code": "P0AFA",
+          "name": "Battery SOC low",
+          "recover": {
+            "args": [
+              "battery_soc",
+              10
+            ],
+            "op": "gt"
+          },
+          "severity": "warning",
+          "trigger": {
+            "args": [
+              "battery_soc",
+              5
+            ],
+            "op": "lt"
+          },
+          "uds_code": 719360
+        }
+      ],
+      "hardware": {
+        "adc": {
+          "channels": {
+            "battery_temperature_sensor": [
+              -40,
+              100
+            ],
+            "current_sensor": [
+              -300,
+              300
+            ],
+            "voltage_sensor": [
+              0,
+              600
+            ]
+          },
+          "resolution_bits": 12
+        },
+        "can_controller": {
+          "fd_capable": true,
+          "rx_fifo_frames": 128
+        },
+        "cpu_mhz": 120,
+        "flash_kib": 512,
+        "gpio_outputs": [
+          "power_permit"
+        ],
+        "ram_kib": 128,
+        "task_budget_us": 8000
+      },
+      "inputs": [
+        "ignition",
+        "soc_sensor",
+        "voltage_sensor",
+        "current_sensor",
+        "battery_temperature_sensor"
+      ],
+      "messages": [
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "tx",
+          "dlc": 8,
+          "fd": false,
+          "id": 784,
+          "name": "BatteryStatus",
+          "period_ms": 100,
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 100,
+              "min": 0,
+              "name": "battery_soc",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "pack_voltage",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": "V"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 300,
+              "min": -300,
+              "name": "pack_current",
+              "offset": 0,
+              "signed": true,
+              "start": 32,
+              "unit": "A"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "battery_fault",
+              "offset": 0,
+              "signed": false,
+              "start": 48,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "power_permit",
+              "offset": 0,
+              "signed": false,
+              "start": 49,
+              "unit": ""
+            }
+          ]
+        }
+      ],
+      "name": "BMS ECU",
+      "schema_version": 1,
+      "state_machine": {
+        "initial": "OFF",
+        "states": [
+          "OFF",
+          "RUN",
+          "FAULT"
+        ],
+        "transitions": [
+          {
+            "from": "OFF",
+            "to": "RUN",
+            "when": "ignition"
+          },
+          {
+            "from": "RUN",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "RUN",
+            "to": "FAULT",
+            "when": "battery_fault"
+          },
+          {
+            "from": "FAULT",
+            "to": "RUN",
+            "when": {
+              "args": [
+                "battery_fault",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "FAULT",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "assign": {
+            "battery_fault": {
+              "args": [
+                {
+                  "args": [
+                    "battery_temperature_sensor",
+                    60
+                  ],
+                  "op": "gt"
+                },
+                {
+                  "args": [
+                    "soc_sensor",
+                    5
+                  ],
+                  "op": "lt"
+                }
+              ],
+              "op": "or"
+            },
+            "battery_soc": "soc_sensor",
+            "pack_current": "current_sensor",
+            "pack_voltage": "voltage_sensor"
+          },
+          "name": "monitor",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "power_permit": {
+              "args": [
+                "ignition",
+                {
+                  "args": [
+                    "battery_fault",
+                    0
+                  ],
+                  "op": "eq"
+                }
+              ],
+              "op": "and"
+            }
+          },
+          "name": "contactor",
+          "period_ms": 10
+        }
+      ],
+      "variables": {
+        "battery_fault": 0,
+        "battery_soc": 85,
+        "pack_current": 0,
+        "pack_voltage": 390,
+        "power_permit": 1
+      }
+    },
+    "../ecu_templates/cluster.json": {
+      "assumptions": [
+        "Generic educational model; not an OEM controller.",
+        "Classic CAN, little-endian signals, 10 ms simulation step."
+      ],
+      "bindings": {},
+      "domain": "HMI",
+      "dtcs": [],
+      "hardware": {
+        "adc": {
+          "channels": {},
+          "resolution_bits": 12
+        },
+        "can_controller": {
+          "fd_capable": true,
+          "rx_fifo_frames": 128
+        },
+        "cpu_mhz": 120,
+        "flash_kib": 512,
+        "gpio_outputs": [],
+        "ram_kib": 128,
+        "task_budget_us": 8000
+      },
+      "inputs": [
+        "ignition",
+        "vehicle_speed",
+        "vehicle_rpm",
+        "motor_rpm",
+        "motor_temperature",
+        "motor_torque",
+        "motor_fault",
+        "battery_soc",
+        "pack_voltage",
+        "pack_current",
+        "battery_fault",
+        "power_permit",
+        "abs_active",
+        "pressure",
+        "wheel_slip",
+        "aeb_request",
+        "acc_throttle",
+        "acc_active",
+        "fcw",
+        "time_to_collision"
+      ],
+      "messages": [
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 288,
+          "name": "VehicleStatus",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 288,
+              "min": 0,
+              "name": "vehicle_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": "km/h"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.25,
+              "length": 16,
+              "max": 16000,
+              "min": 0,
+              "name": "vehicle_rpm",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": "rpm"
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 256,
+          "name": "MotorStatus",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.25,
+              "length": 16,
+              "max": 16000,
+              "min": 0,
+              "name": "motor_rpm",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": "rpm"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 150,
+              "min": -40,
+              "name": "motor_temperature",
+              "offset": -40,
+              "signed": false,
+              "start": 16,
+              "unit": "°C"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 320,
+              "min": 0,
+              "name": "motor_torque",
+              "offset": 0,
+              "signed": false,
+              "start": 32,
+              "unit": "Nm"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "motor_fault",
+              "offset": 0,
+              "signed": false,
+              "start": 48,
+              "unit": ""
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 784,
+          "name": "BatteryStatus",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 100,
+              "min": 0,
+              "name": "battery_soc",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "pack_voltage",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": "V"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 300,
+              "min": -300,
+              "name": "pack_current",
+              "offset": 0,
+              "signed": true,
+              "start": 32,
+              "unit": "A"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "battery_fault",
+              "offset": 0,
+              "signed": false,
+              "start": 48,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "power_permit",
+              "offset": 0,
+              "signed": false,
+              "start": 49,
+              "unit": ""
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 544,
+          "name": "BrakeStatus",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "abs_active",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "pressure",
+              "offset": 0,
+              "signed": false,
+              "start": 8,
+              "unit": "ratio"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "wheel_slip",
+              "offset": 0,
+              "signed": false,
+              "start": 24,
+              "unit": "ratio"
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 1104,
+          "name": "ADASControl",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "aeb_request",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "acc_throttle",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "acc_active",
+              "offset": 0,
+              "signed": false,
+              "start": 32,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "fcw",
+              "offset": 0,
+              "signed": false,
+              "start": 33,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 99,
+              "min": 0,
+              "name": "time_to_collision",
+              "offset": 0,
+              "signed": false,
+              "start": 40,
+              "unit": "s"
+            }
+          ]
+        }
+      ],
+      "name": "Instrument Cluster",
+      "schema_version": 1,
+      "state_machine": {
+        "initial": "OFF",
+        "states": [
+          "OFF",
+          "RUN"
+        ],
+        "transitions": [
+          {
+            "from": "OFF",
+            "to": "RUN",
+            "when": "ignition"
+          },
+          {
+            "from": "RUN",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "assign": {
+            "display_rpm": "motor_rpm",
+            "display_soc": "battery_soc",
+            "display_speed": "vehicle_speed",
+            "display_ttc": "time_to_collision",
+            "warning": {
+              "args": [
+                {
+                  "args": [
+                    "motor_fault",
+                    "battery_fault"
+                  ],
+                  "op": "or"
+                },
+                "fcw"
+              ],
+              "op": "or"
+            }
+          },
+          "name": "display",
+          "period_ms": 10
+        }
+      ],
+      "variables": {
+        "display_rpm": 0,
+        "display_soc": 85,
+        "display_speed": 0,
+        "display_ttc": 99,
+        "warning": 0
+      }
+    },
+    "../ecu_templates/dynamics.json": {
+      "assumptions": [
+        "Generic educational model; not an OEM controller.",
+        "Classic CAN, little-endian signals, 10 ms simulation step."
+      ],
+      "bindings": {},
+      "domain": "Vehicle",
+      "dtcs": [],
+      "hardware": {
+        "adc": {
+          "channels": {},
+          "resolution_bits": 12
+        },
+        "can_controller": {
+          "fd_capable": true,
+          "rx_fifo_frames": 128
+        },
+        "cpu_mhz": 120,
+        "flash_kib": 512,
+        "gpio_outputs": [],
+        "ram_kib": 128,
+        "task_budget_us": 8000
+      },
+      "inputs": [
+        "ignition",
+        "speed_sensor",
+        "rpm_sensor"
+      ],
+      "messages": [
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "tx",
+          "dlc": 8,
+          "fd": false,
+          "id": 288,
+          "name": "VehicleStatus",
+          "period_ms": 20,
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 288,
+              "min": 0,
+              "name": "vehicle_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": "km/h"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.25,
+              "length": 16,
+              "max": 16000,
+              "min": 0,
+              "name": "vehicle_rpm",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": "rpm"
+            }
+          ]
+        }
+      ],
+      "name": "Dynamics ECU",
+      "schema_version": 1,
+      "state_machine": {
+        "initial": "OFF",
+        "states": [
+          "OFF",
+          "RUN"
+        ],
+        "transitions": [
+          {
+            "from": "OFF",
+            "to": "RUN",
+            "when": "ignition"
+          },
+          {
+            "from": "RUN",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "assign": {
+            "vehicle_rpm": "rpm_sensor",
+            "vehicle_speed": {
+              "args": [
+                "speed_sensor",
+                3.6
+              ],
+              "op": "mul"
+            }
+          },
+          "name": "measure",
+          "period_ms": 10
+        }
+      ],
+      "variables": {
+        "vehicle_rpm": 0,
+        "vehicle_speed": 0
+      }
+    },
+    "../ecu_templates/eps.json": {
+      "assumptions": [
+        "Generic educational EPS model; not an OEM controller.",
+        "Road-wheel angle follows the normalized driver request with a fixed 0.6 rad limit.",
+        "The assist limit is the EPS actuator capability, not the plant steering limit; when the scenario plant max_steer_angle_rad is lower, the world reports the saturated angle the kinematic bicycle actually used."
+      ],
+      "bindings": {
+        "steering_angle": "steering_angle"
+      },
+      "domain": "Chassis",
+      "dtcs": [],
+      "hardware": {
+        "adc": {
+          "channels": {},
+          "resolution_bits": 12
+        },
+        "can_controller": {
+          "fd_capable": true,
+          "rx_fifo_frames": 128
+        },
+        "cpu_mhz": 120,
+        "flash_kib": 512,
+        "gpio_outputs": [],
+        "ram_kib": 128,
+        "task_budget_us": 8000
+      },
+      "inputs": [
+        "ignition",
+        "steering",
+        "speed_sensor"
+      ],
+      "messages": [
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "tx",
+          "dlc": 8,
+          "fd": false,
+          "id": 610,
+          "name": "EPSStatus",
+          "period_ms": 20,
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": -1,
+              "name": "steering_angle",
+              "offset": 0,
+              "signed": true,
+              "start": 0,
+              "unit": "rad"
+            }
+          ]
+        }
+      ],
+      "name": "EPS ECU",
+      "schema_version": 1,
+      "state_machine": {
+        "initial": "OFF",
+        "states": [
+          "OFF",
+          "RUN"
+        ],
+        "transitions": [
+          {
+            "from": "OFF",
+            "to": "RUN",
+            "when": "ignition"
+          },
+          {
+            "from": "RUN",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "assign": {
+            "steering_command": "steering"
+          },
+          "cost_us": 80,
+          "name": "measure",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "steering_angle": {
+              "args": [
+                "ignition",
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            "steering_command",
+                            0.6
+                          ],
+                          "op": "mul"
+                        },
+                        -0.6
+                      ],
+                      "op": "max"
+                    },
+                    0.6
+                  ],
+                  "op": "min"
+                },
+                0
+              ],
+              "op": "if"
+            }
+          },
+          "cost_us": 120,
+          "name": "assist",
+          "period_ms": 10
+        }
+      ],
+      "variables": {
+        "steering_angle": 0,
+        "steering_command": 0
+      }
+    },
+    "../ecu_templates/motor_ev.json": {
+      "assumptions": [
+        "Generic educational model; not an OEM controller.",
+        "Classic CAN, little-endian signals, 10 ms simulation step."
+      ],
+      "bindings": {
+        "fan": "fan_cmd",
+        "torque_request": "motor_torque"
+      },
+      "domain": "Powertrain",
+      "dtcs": [
+        {
+          "code": "P0217",
+          "name": "Motor overtemperature",
+          "recover": {
+            "args": [
+              "motor_temperature",
+              105
+            ],
+            "op": "lt"
+          },
+          "severity": "critical",
+          "trigger": {
+            "args": [
+              "motor_temperature",
+              115
+            ],
+            "op": "gt"
+          },
+          "uds_code": 136960
+        }
+      ],
+      "hardware": {
+        "adc": {
+          "channels": {
+            "temperature_sensor": [
+              -40,
+              150
+            ]
+          },
+          "resolution_bits": 12
+        },
+        "can_controller": {
+          "fd_capable": true,
+          "rx_fifo_frames": 128
+        },
+        "cpu_mhz": 120,
+        "flash_kib": 512,
+        "gpio_outputs": [
+          "fan_cmd"
+        ],
+        "ram_kib": 128,
+        "task_budget_us": 8000
+      },
+      "inputs": [
+        "ignition",
+        "throttle",
+        "drive_permit",
+        "rpm_sensor",
+        "temperature_sensor",
+        "power_permit",
+        "battery_soc",
+        "pack_voltage",
+        "pack_current",
+        "battery_fault",
+        "aeb_request",
+        "acc_throttle",
+        "acc_active",
+        "fcw",
+        "time_to_collision"
+      ],
+      "messages": [
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "tx",
+          "dlc": 8,
+          "fd": false,
+          "id": 256,
+          "name": "MotorStatus",
+          "period_ms": 20,
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.25,
+              "length": 16,
+              "max": 16000,
+              "min": 0,
+              "name": "motor_rpm",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": "rpm"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 150,
+              "min": -40,
+              "name": "motor_temperature",
+              "offset": -40,
+              "signed": false,
+              "start": 16,
+              "unit": "°C"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 320,
+              "min": 0,
+              "name": "motor_torque",
+              "offset": 0,
+              "signed": false,
+              "start": 32,
+              "unit": "Nm"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "motor_fault",
+              "offset": 0,
+              "signed": false,
+              "start": 48,
+              "unit": ""
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 784,
+          "name": "BatteryStatus",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 100,
+              "min": 0,
+              "name": "battery_soc",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "pack_voltage",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": "V"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 300,
+              "min": -300,
+              "name": "pack_current",
+              "offset": 0,
+              "signed": true,
+              "start": 32,
+              "unit": "A"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "battery_fault",
+              "offset": 0,
+              "signed": false,
+              "start": 48,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "power_permit",
+              "offset": 0,
+              "signed": false,
+              "start": 49,
+              "unit": ""
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 1104,
+          "name": "ADASControl",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "aeb_request",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.0001,
+              "length": 16,
+              "max": 1,
+              "min": 0,
+              "name": "acc_throttle",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "acc_active",
+              "offset": 0,
+              "signed": false,
+              "start": 32,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "fcw",
+              "offset": 0,
+              "signed": false,
+              "start": 33,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 99,
+              "min": 0,
+              "name": "time_to_collision",
+              "offset": 0,
+              "signed": false,
+              "start": 40,
+              "unit": "s"
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "rx",
+          "dlc": 8,
+          "fd": false,
+          "id": 608,
+          "name": "DriveStatus",
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "drive_permit",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            }
+          ]
+        }
+      ],
+      "name": "Motor ECU",
+      "schema_version": 1,
+      "state_machine": {
+        "initial": "OFF",
+        "states": [
+          "OFF",
+          "RUN",
+          "FAULT"
+        ],
+        "transitions": [
+          {
+            "from": "OFF",
+            "to": "RUN",
+            "when": "ignition"
+          },
+          {
+            "from": "RUN",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "RUN",
+            "to": "FAULT",
+            "when": "motor_fault"
+          },
+          {
+            "from": "FAULT",
+            "to": "RUN",
+            "when": {
+              "args": [
+                "motor_fault",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "FAULT",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "assign": {
+            "motor_fault": {
+              "args": [
+                "temperature_sensor",
+                115
+              ],
+              "op": "gt"
+            },
+            "motor_rpm": "rpm_sensor",
+            "motor_temperature": "temperature_sensor"
+          },
+          "name": "measure",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "fan_cmd": {
+              "args": [
+                "motor_temperature",
+                90
+              ],
+              "op": "gt"
+            },
+            "motor_torque": {
+              "args": [
+                {
+                  "args": [
+                    "aeb_request",
+                    0,
+                    {
+                      "args": [
+                        {
+                          "args": [
+                            "ignition",
+                            {
+                              "args": [
+                                "motor_fault",
+                                0
+                              ],
+                              "op": "eq"
+                            }
+                          ],
+                          "op": "and"
+                        },
+                        {
+                          "args": [
+                            {
+                              "args": [
+                                {
+                                  "args": [
+                                    "acc_active",
+                                    "acc_throttle",
+                                    "throttle"
+                                  ],
+                                  "op": "if"
+                                },
+                                320
+                              ],
+                              "op": "mul"
+                            },
+                            "power_permit"
+                          ],
+                          "op": "mul"
+                        },
+                        0
+                      ],
+                      "op": "if"
+                    }
+                  ],
+                  "op": "if"
+                },
+                "drive_permit"
+              ],
+              "op": "mul"
+            }
+          },
+          "name": "control",
+          "period_ms": 10
+        }
+      ],
+      "variables": {
+        "fan_cmd": 0,
+        "motor_fault": 0,
+        "motor_rpm": 0,
+        "motor_temperature": 30,
+        "motor_torque": 0
+      }
+    },
+    "../ecu_templates/radar.json": {
+      "assumptions": [
+        "Functional software-in-the-loop demonstration; not production ADAS/ADS.",
+        "Radar observations are synthetic sensor measurements, not raw camera/radar perception.",
+        "The object list carries four slots; slots 0 (lead vehicle) and 1 (static obstacle) are populated."
+      ],
+      "bindings": {},
+      "domain": "Perception",
+      "dtcs": [
+        {
+          "code": "C1A10",
+          "name": "Forward radar unavailable",
+          "recover": {
+            "args": [
+              "radar_fault",
+              0
+            ],
+            "op": "eq"
+          },
+          "severity": "warning",
+          "trigger": "radar_fault",
+          "uds_code": 12689664
+        }
+      ],
+      "hardware": {
+        "adc": {
+          "channels": {},
+          "resolution_bits": 12
+        },
+        "can_controller": {
+          "fd_capable": true,
+          "rx_fifo_frames": 128
+        },
+        "cpu_mhz": 160,
+        "flash_kib": 512,
+        "gpio_outputs": [],
+        "ram_kib": 128,
+        "task_budget_us": 8000
+      },
+      "inputs": [
+        "ignition",
+        "radar_distance_sensor",
+        "closing_speed_sensor",
+        "static_object_sensor",
+        "speed_sensor"
+      ],
+      "messages": [
+        {
+          "brs": true,
+          "bus": "adas",
+          "direction": "tx",
+          "dlc": 32,
+          "fd": true,
+          "id": 1024,
+          "name": "RadarObjectList",
+          "period_ms": 20,
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 4,
+              "min": 0,
+              "name": "object_count",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 255,
+              "min": 0,
+              "name": "sample_counter",
+              "offset": 0,
+              "signed": false,
+              "start": 8,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "radar_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 16,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "obj0_range",
+              "offset": 0,
+              "signed": false,
+              "start": 24,
+              "unit": "m"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 80,
+              "min": 0,
+              "name": "obj0_closing_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 40,
+              "unit": "m/s"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 100,
+              "min": 0,
+              "name": "obj0_confidence",
+              "offset": 0,
+              "signed": false,
+              "start": 56,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "obj0_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 64,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "obj1_range",
+              "offset": 0,
+              "signed": false,
+              "start": 80,
+              "unit": "m"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 80,
+              "min": 0,
+              "name": "obj1_closing_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 96,
+              "unit": "m/s"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 100,
+              "min": 0,
+              "name": "obj1_confidence",
+              "offset": 0,
+              "signed": false,
+              "start": 112,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "obj1_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 120,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "obj2_range",
+              "offset": 0,
+              "signed": false,
+              "start": 136,
+              "unit": "m"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 80,
+              "min": 0,
+              "name": "obj2_closing_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 152,
+              "unit": "m/s"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 100,
+              "min": 0,
+              "name": "obj2_confidence",
+              "offset": 0,
+              "signed": false,
+              "start": 168,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "obj2_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 176,
+              "unit": ""
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 600,
+              "min": 0,
+              "name": "obj3_range",
+              "offset": 0,
+              "signed": false,
+              "start": 192,
+              "unit": "m"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 0.01,
+              "length": 16,
+              "max": 80,
+              "min": 0,
+              "name": "obj3_closing_speed",
+              "offset": 0,
+              "signed": false,
+              "start": 208,
+              "unit": "m/s"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 8,
+              "max": 100,
+              "min": 0,
+              "name": "obj3_confidence",
+              "offset": 0,
+              "signed": false,
+              "start": 224,
+              "unit": "%"
+            },
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "obj3_valid",
+              "offset": 0,
+              "signed": false,
+              "start": 232,
+              "unit": ""
+            }
+          ]
+        }
+      ],
+      "name": "Radar ECU",
+      "schema_version": 1,
+      "state_machine": {
+        "initial": "OFF",
+        "states": [
+          "OFF",
+          "RUN",
+          "FAULT"
+        ],
+        "transitions": [
+          {
+            "from": "OFF",
+            "to": "RUN",
+            "when": "ignition"
+          },
+          {
+            "from": "RUN",
+            "to": "FAULT",
+            "when": "radar_fault"
+          },
+          {
+            "from": "FAULT",
+            "to": "RUN",
+            "when": {
+              "args": [
+                "radar_fault",
+                0
+              ],
+              "op": "eq"
+            }
+          },
+          {
+            "from": "RUN",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "assign": {
+            "obj0_closing_speed": "closing_speed_sensor",
+            "obj0_range": "radar_distance_sensor",
+            "obj1_closing_speed": "speed_sensor",
+            "obj1_range": "static_object_sensor",
+            "radar_fault": {
+              "args": [
+                {
+                  "args": [
+                    "radar_distance_sensor",
+                    600
+                  ],
+                  "op": "gt"
+                },
+                {
+                  "args": [
+                    "radar_distance_sensor",
+                    0
+                  ],
+                  "op": "lt"
+                }
+              ],
+              "op": "or"
+            }
+          },
+          "cost_us": 220,
+          "name": "radar_sampling",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "obj0_confidence": {
+              "args": [
+                "radar_fault",
+                0,
+                100
+              ],
+              "op": "if"
+            },
+            "obj0_valid": {
+              "args": [
+                "radar_fault",
+                0
+              ],
+              "op": "eq"
+            },
+            "obj1_confidence": {
+              "args": [
+                {
+                  "args": [
+                    "static_object_sensor",
+                    500
+                  ],
+                  "op": "lt"
+                },
+                100,
+                0
+              ],
+              "op": "if"
+            },
+            "obj1_valid": {
+              "args": [
+                "static_object_sensor",
+                500
+              ],
+              "op": "lt"
+            },
+            "object_count": {
+              "args": [
+                {
+                  "args": [
+                    "radar_fault",
+                    0
+                  ],
+                  "op": "eq"
+                },
+                {
+                  "args": [
+                    "static_object_sensor",
+                    500
+                  ],
+                  "op": "lt"
+                }
+              ],
+              "op": "add"
+            },
+            "radar_valid": {
+              "args": [
+                "radar_fault",
+                0
+              ],
+              "op": "eq"
+            },
+            "sample_counter": {
+              "args": [
+                {
+                  "args": [
+                    "sample_counter",
+                    254
+                  ],
+                  "op": "gt"
+                },
+                0,
+                {
+                  "args": [
+                    "sample_counter",
+                    1
+                  ],
+                  "op": "add"
+                }
+              ],
+              "op": "if"
+            }
+          },
+          "cost_us": 200,
+          "name": "radar_validity",
+          "period_ms": 10
+        }
+      ],
+      "variables": {
+        "obj0_closing_speed": 0,
+        "obj0_confidence": 100,
+        "obj0_range": 120,
+        "obj0_valid": 1,
+        "obj1_closing_speed": 0,
+        "obj1_confidence": 100,
+        "obj1_range": 150,
+        "obj1_valid": 1,
+        "obj2_closing_speed": 0,
+        "obj2_confidence": 0,
+        "obj2_range": 0,
+        "obj2_valid": 0,
+        "obj3_closing_speed": 0,
+        "obj3_confidence": 0,
+        "obj3_range": 0,
+        "obj3_valid": 0,
+        "object_count": 0,
+        "radar_fault": 0,
+        "radar_valid": 1,
+        "sample_counter": 0
+      }
+    },
+    "../ecu_templates/transmission.json": {
+      "assumptions": [
+        "Generic educational transmission model; not an OEM controller.",
+        "Gear encoding is 0=P, 1=N, 2=D. Reverse is not implemented.",
+        "Drive permit is broadcast to the motor controller over CAN.",
+        "The vehicle plant enforces the parking interlock at actuation time: a delayed Park engagement above park_speed_mps cannot lock the driveline instantly and instead completes a declared pre-lock braking ramp (park_brake_mps2)."
+      ],
+      "bindings": {
+        "drive_permit": "drive_permit",
+        "gear_position": "gear_position"
+      },
+      "domain": "Powertrain",
+      "dtcs": [],
+      "hardware": {
+        "adc": {
+          "channels": {},
+          "resolution_bits": 12
+        },
+        "can_controller": {
+          "fd_capable": true,
+          "rx_fifo_frames": 128
+        },
+        "cpu_mhz": 120,
+        "flash_kib": 512,
+        "gpio_outputs": [],
+        "ram_kib": 128,
+        "task_budget_us": 8000
+      },
+      "inputs": [
+        "ignition",
+        "gear",
+        "speed_sensor"
+      ],
+      "messages": [
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "tx",
+          "dlc": 8,
+          "fd": false,
+          "id": 608,
+          "name": "DriveStatus",
+          "period_ms": 10,
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 1,
+              "max": 1,
+              "min": 0,
+              "name": "drive_permit",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            }
+          ]
+        },
+        {
+          "brs": false,
+          "bus": "powertrain",
+          "direction": "tx",
+          "dlc": 8,
+          "fd": false,
+          "id": 609,
+          "name": "GearStatus",
+          "period_ms": 20,
+          "signals": [
+            {
+              "byte_order": "little_endian",
+              "factor": 1,
+              "length": 2,
+              "max": 2,
+              "min": 0,
+              "name": "gear_position",
+              "offset": 0,
+              "signed": false,
+              "start": 0,
+              "unit": ""
+            }
+          ]
+        }
+      ],
+      "name": "Transmission ECU",
+      "schema_version": 1,
+      "state_machine": {
+        "initial": "OFF",
+        "states": [
+          "OFF",
+          "RUN"
+        ],
+        "transitions": [
+          {
+            "from": "OFF",
+            "to": "RUN",
+            "when": "ignition"
+          },
+          {
+            "from": "RUN",
+            "to": "OFF",
+            "when": {
+              "args": [
+                "ignition",
+                0
+              ],
+              "op": "eq"
+            }
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "assign": {
+            "gear_position": {
+              "args": [
+                {
+                  "args": [
+                    "gear",
+                    2
+                  ],
+                  "op": "min"
+                },
+                0
+              ],
+              "op": "max"
+            }
+          },
+          "cost_us": 80,
+          "name": "select",
+          "period_ms": 10
+        },
+        {
+          "assign": {
+            "drive_permit": {
+              "args": [
+                {
+                  "args": [
+                    "ignition",
+                    {
+                      "args": [
+                        "gear_position",
+                        2
+                      ],
+                      "op": "eq"
+                    }
+                  ],
+                  "op": "and"
+                },
+                1,
+                0
+              ],
+              "op": "if"
+            }
+          },
+          "cost_us": 80,
+          "name": "permit",
+          "period_ms": 10
+        }
+      ],
+      "variables": {
+        "drive_permit": 0,
+        "gear_position": 0
+      }
+    }
+  },
+  "kind": "vcanproj",
+  "name": "Adaptive following demonstration",
+  "project_hash": "sha256:fa625fa613b67b6de9a2f421bea8364041ee04d5d733aac28fc5161089aa05b4",
+  "run": {
+    "bitrate": 500000,
+    "policies": [],
+    "step_ms": 10
+  },
+  "runtime": {
+    "controls": {
+      "aeb_enabled": 1.0,
+      "ambient": 25.0,
+      "assist_enabled": 1.0,
+      "brake": 0.0,
+      "following_gain": 0.45,
+      "following_gap_m": 7.0,
+      "following_time_s": 1.5,
+      "gear": 2.0,
+      "headwind_mps": 0.0,
+      "ignition": 1.0,
+      "lead_speed": 12.0,
+      "road_friction": 0.8,
+      "road_grade_deg": 0.0,
+      "steering": 0.0,
+      "target_speed": 72.0,
+      "throttle": 0.0
+    },
+    "tick": 0,
+    "world": {
+      "acceleration": 0.0,
+      "battery_temperature": 28.0,
+      "brake_energy_j": 0.0,
+      "brake_pressure": 0.0,
+      "braking_force_n": 0.0,
+      "closing_speed": 7.0,
+      "collision": 0.0,
+      "current": 0.0,
+      "drag_force_n": 0.0,
+      "drive_permit": 0.0,
+      "fan": 0.0,
+      "gear_position": 2.0,
+      "grade_force_n": 0.0,
+      "heading": 0.0,
+      "kinetic_energy_j": 168750.0,
+      "lateral_accel_mps2": 0.0,
+      "lead_distance": 80.0,
+      "lead_position": 80.0,
+      "motor_temperature": 30.0,
+      "position": 0.0,
+      "power_allowed": 1.0,
+      "requested_steering_rad": 0.0,
+      "rolling_force_n": 0.0,
+      "rpm": 0.0,
+      "soc": 85.0,
+      "speed": 15.0,
+      "static_object_range": 500.0,
+      "static_object_s": 150.0,
+      "steering_angle": 0.0,
+      "tire_utilization": 0.0,
+      "torque_request": 0.0,
+      "traction_force_n": 0.0,
+      "voltage": 390.0,
+      "wheel_fl": 15.0,
+      "wheel_fr": 15.0,
+      "wheel_rl": 15.0,
+      "wheel_rr": 15.0,
+      "x": 0.0,
+      "y": 0.0,
+      "yaw_rate": 0.0
+    }
+  },
+  "scenario": {
+    "bitrate": 500000,
+    "buses": [
+      {
+        "bitrate": 500000,
+        "data_bitrate": 500000,
+        "fd": false,
+        "id": "powertrain",
+        "name": "Powertrain CAN"
+      },
+      {
+        "bitrate": 500000,
+        "data_bitrate": 2000000,
+        "fd": true,
+        "id": "adas",
+        "name": "ADAS CAN FD"
+      }
+    ],
+    "ecus": [
+      "../ecu_templates/motor_ev.json",
+      "../ecu_templates/abs.json",
+      "../ecu_templates/bms.json",
+      "../ecu_templates/dynamics.json",
+      "../ecu_templates/cluster.json",
+      "../ecu_templates/radar.json",
+      "../ecu_templates/adas_following.json",
+      "../ecu_templates/eps.json",
+      "../ecu_templates/transmission.json"
+    ],
+    "gateway_routes": [
+      {
+        "from": "powertrain",
+        "id": 288,
+        "to": "adas"
+      },
+      {
+        "from": "adas",
+        "id": 1104,
+        "to": "powertrain"
+      }
+    ],
+    "initial_controls": {
+      "aeb_enabled": 1,
+      "ambient": 25,
+      "assist_enabled": 1,
+      "following_gain": 0.45,
+      "following_gap_m": 7,
+      "following_time_s": 1.5,
+      "headwind_mps": 0,
+      "road_friction": 0.8,
+      "road_grade_deg": 0,
+      "target_speed": 72
+    },
+    "initial_state": {
+      "soc": 85,
+      "speed": 15,
+      "wheel_fl": 15,
+      "wheel_fr": 15,
+      "wheel_rl": 15,
+      "wheel_rr": 15
+    },
+    "name": "Adaptive following demonstration",
+    "plant": {
+      "drag_area_m2": 0.7,
+      "initial_gear": 2,
+      "mass_kg": 1500,
+      "max_steer_angle_rad": 0.6,
+      "max_yaw_rate_rad_s": 2.0,
+      "model": "bicycle_grip_v2",
+      "park_speed_mps": 0.5,
+      "rolling_coefficient": 0.012,
+      "steer_rate_rad_s": 0.8,
+      "wheel_radius_m": 0.32,
+      "wheelbase_m": 2.7
+    },
+    "schema_version": 1,
+    "sensors": [
+      {
+        "max": 80,
+        "min": 0,
+        "name": "speed_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "speed",
+        "unit": "m/s"
+      },
+      {
+        "max": 16000,
+        "min": 0,
+        "name": "rpm_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "rpm",
+        "unit": "rpm"
+      },
+      {
+        "max": 150,
+        "min": -40,
+        "name": "temperature_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "motor_temperature",
+        "unit": "°C"
+      },
+      {
+        "max": 100,
+        "min": -40,
+        "name": "battery_temperature_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "battery_temperature",
+        "unit": "°C"
+      },
+      {
+        "max": 100,
+        "min": 0,
+        "name": "soc_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "soc",
+        "unit": "%"
+      },
+      {
+        "max": 600,
+        "min": 0,
+        "name": "voltage_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "voltage",
+        "unit": "V"
+      },
+      {
+        "max": 300,
+        "min": -300,
+        "name": "current_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "current",
+        "unit": "A"
+      },
+      {
+        "max": 80,
+        "min": 0,
+        "name": "wheel_fl_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "wheel_fl",
+        "unit": "m/s"
+      },
+      {
+        "max": 80,
+        "min": 0,
+        "name": "wheel_fr_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "wheel_fr",
+        "unit": "m/s"
+      },
+      {
+        "max": 80,
+        "min": 0,
+        "name": "wheel_rl_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "wheel_rl",
+        "unit": "m/s"
+      },
+      {
+        "max": 80,
+        "min": 0,
+        "name": "wheel_rr_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "wheel_rr",
+        "unit": "m/s"
+      },
+      {
+        "max": 600,
+        "min": 0,
+        "name": "radar_distance_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "lead_distance",
+        "unit": "m"
+      },
+      {
+        "max": 80,
+        "min": 0,
+        "name": "closing_speed_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "closing_speed",
+        "unit": "m/s"
+      },
+      {
+        "max": 500,
+        "min": 0,
+        "name": "static_object_sensor",
+        "noise": 0,
+        "period_ms": 10,
+        "source": "static_object_range",
+        "unit": "m"
+      },
+      {
+        "max": 600,
+        "min": 0,
+        "name": "front_perception_sensor",
+        "noise": 0.05,
+        "period_ms": 20,
+        "source": "lead_distance",
+        "unit": "m"
+      }
+    ],
+    "step_ms": 10,
+    "traffic": [
+      {
+        "id": "lead",
+        "length": 4.5,
+        "speed": 8,
+        "target_speed": 8,
+        "width": 1.8,
+        "x": 84.5,
+        "y": 0,
+        "yaw": 0
+      }
+    ]
+  },
+  "schema_version": 1
+}

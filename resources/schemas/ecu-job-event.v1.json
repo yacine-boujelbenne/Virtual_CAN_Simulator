@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:virtual-vehicle-lab:ecu-job-event:1",
+  "title": "Deterministic ECU cycle job event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "epoch", "job_id", "state", "reason", "sim_time_us", "sampled_at_us", "released_at_us", "deadline_at_us", "duration_us", "required_bytes", "reserved_bytes", "input_hash"],
+  "properties": {
+    "contract_version": {"const": 1},
+    "epoch": {"type": "integer", "minimum": 0},
+    "job_id": {"type": "integer", "minimum": 1},
+    "state": {"enum": ["queued", "running", "complete", "failed", "deadline_failed", "cancelled", "resource_rejected"]},
+    "reason": {"enum": ["none", "queue_full", "ram_exhausted", "watchdog_latched", "deadline_miss", "watchdog", "epoch_reset", "evaluation_failed"]},
+    "sim_time_us": {"type": "integer", "minimum": 0},
+    "sampled_at_us": {"type": "integer", "minimum": 0},
+    "released_at_us": {"type": "integer", "minimum": 0},
+    "started_at_us": {"type": "integer", "minimum": 0},
+    "computed_at_us": {"type": "integer", "minimum": 0},
+    "deadline_at_us": {"type": "integer", "minimum": 0},
+    "duration_us": {"type": "integer", "minimum": 0},
+    "required_bytes": {"type": "integer", "minimum": 0},
+    "reserved_bytes": {"type": "integer", "minimum": 0},
+    "input_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "error": {"type": "string", "maxLength": 256}
+  },
+  "allOf": [
+    {"if": {"properties": {"state": {"const": "complete"}}}, "then": {"required": ["started_at_us", "computed_at_us"]}, "else": {"not": {"required": ["computed_at_us"]}}}
+  ],
+  "$comment": "All timestamps are simulation microseconds. Validate arithmetic ordering in C++; JSON Schema does not compare fields. required_bytes is the modeled allocation request; reserved_bytes is zero for rejected work and the job's reservation for admitted work. Terminal events describe the reservation being released, not the live queue total."
+}

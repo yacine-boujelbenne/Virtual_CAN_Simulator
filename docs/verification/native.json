@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-03",
+  "native_ctest": {
+    "passed": 81,
+    "failed": 0,
+    "elapsed_seconds": 29.39
+  },
+  "display": "Qt 6.8.3 / Wayland; 1366x698 complete scene visibility; real STL dialog/project roundtrip",
+  "initial_soak": {
+    "passed": true,
+    "host_seconds": 602.86,
+    "project_hash": "sha256:4961273642e4ab984631119244e5933b89e5466f04e82b829e3d06e9fae6cbc2",
+    "minimum_gap_m": 19.464385646670053,
+    "final_speed_mps": 8.000200797764329,
+    "pause_stable": true,
+    "ticks": 27812,
+    "virtual_seconds": 278.12,
+    "ticks_per_host_second_between_samples": 46.283
+  },
+  "corrected_pacing": {
+    "passed": true,
+    "host_seconds": 120.43,
+    "project_hash": "sha256:4961273642e4ab984631119244e5933b89e5466f04e82b829e3d06e9fae6cbc2",
+    "minimum_gap_m": 19.463059936031243,
+    "final_speed_mps": 8.000331133778646,
+    "pause_stable": true,
+    "ticks": 11716,
+    "virtual_seconds": 117.16,
+    "ticks_per_host_second_between_samples": 97.66
+  },
+  "limits": [
+    "Planar educational plant; rectangular contact geometry",
+    "Visual pitch/roll; no suspension/deformable crash physics",
+    "Sampled telemetry; full durable runtime recording/replay remain open"
+  ],
+  "post_cleanup_ctest": {
+    "passed": 81,
+    "failed": 0,
+    "elapsed_seconds": 31.58
+  }
+}

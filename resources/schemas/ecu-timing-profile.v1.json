@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:virtual-vehicle-lab:ecu-timing-profile:1",
+  "title": "Optional ECU hardware timing fields",
+  "type": "object",
+  "properties": {
+    "execution_profile": {"enum": ["tick", "resource-v1"], "default": "tick"},
+    "freshness_mode": {"enum": ["acquisition", "reception"], "default": "acquisition"},
+    "scheduler": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_pending_jobs": {"type": "integer", "minimum": 1, "maximum": 4096, "default": 8},
+        "queue_bytes": {"type": "integer", "minimum": 1},
+        "job_overhead_bytes": {"type": "integer", "minimum": 0, "default": 256},
+        "deadline_us": {"type": "integer", "minimum": 1, "maximum": 60000000, "default": 100000},
+        "watchdog_us": {"type": "integer", "minimum": 1, "maximum": 60000000, "default": 1000000}
+      }
+    }
+  },
+  "$comment": "Applied to the hardware object; existing hardware fields remain allowed. C++ additionally bounds queue_bytes by remaining declared RAM and overhead by queue_bytes. Defaults are runtime interpretation only, never injected into the v1 project hash."
+}

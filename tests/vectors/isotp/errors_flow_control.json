@@ -1,0 +1,24 @@
+{
+  "name": "flow_control_faults",
+  "description": "A busy transmitter, a reserved separation time, repeated wait frames and an aborted flow control are rejected in order.",
+  "config": {
+    "tx_id": 2016,
+    "rx_id": 2024,
+    "fd": false,
+    "link_length": 8,
+    "block_size": 8,
+    "stmin": 0
+  },
+  "steps": [
+    {"actor": "a", "action": "send",
+     "payload": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f2021222324252627",
+     "frames": ["1028000102030405"]},
+    {"actor": "a", "action": "send", "payload": "0102", "error": "ISO-TP transmitter busy"},
+    {"actor": "a", "action": "receive", "frame": "300480", "error": "Reserved ISO-TP STmin"},
+    {"actor": "a", "action": "receive", "frame": "310400", "frames": []},
+    {"actor": "a", "action": "receive", "frame": "310400", "frames": []},
+    {"actor": "a", "action": "receive", "frame": "310400", "frames": []},
+    {"actor": "a", "action": "receive", "frame": "310400", "error": "ISO-TP wait-frame limit exceeded"},
+    {"actor": "a", "action": "receive", "frame": "320400", "error": "ISO-TP flow control aborted"}
+  ]
+}

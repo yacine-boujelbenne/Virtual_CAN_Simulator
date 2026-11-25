@@ -21,24 +21,13 @@ Receiver::~Receiver()
 
 void Receiver::receiveEcuData(CanTp &tp)
 {
-    //Declaration of the availibility of the ECU.
-
-        std::cout << "      -> ECU is available!"<<std::endl<<"      -> Start receiving...." << std::endl;
-        
-        this->setmessage(tp.receiveMessage());
-
-    
-    
-    if (this->isAvailable()==false)
-    {
-        std::cout << "      -> ECU is not available. Cannot receive data!" << std::endl;
-
-    }
-    
+    if (!availability) return;
+    setmessage(tp.receiveMessage());
 }
 
 void Receiver::setEcuName(const std::string &name)
 {
+    ECUName = name;
 }
 std::string Receiver::getEcuName() const
 {
@@ -57,8 +46,9 @@ uint32_t Receiver::getValue() const
     // Placeholder implementation, should be overridden in derived classes
     return 0x00000000;
 }
-void Receiver::setValue(int32_t value)
+void Receiver::setValue(int32_t /*value*/)
 {
     // Placeholder implementation, should be overridden in derived classes
     std::cout << "      -> Setting value in Receiver class is not implemented!" << std::endl;
 }
+

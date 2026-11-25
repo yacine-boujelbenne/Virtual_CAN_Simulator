@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "name": "BMS ECU",
+  "inputs": [
+    "ignition",
+    "soc_sensor",
+    "voltage_sensor",
+    "current_sensor",
+    "battery_temperature_sensor"
+  ],
+  "variables": {
+    "battery_soc": 85,
+    "pack_voltage": 390,
+    "pack_current": 0,
+    "battery_fault": 0,
+    "power_permit": 1
+  },
+  "tasks": [
+    {
+      "name": "monitor",
+      "period_ms": 10,
+      "assign": {
+        "battery_soc": "soc_sensor",
+        "pack_voltage": "voltage_sensor",
+        "pack_current": "current_sensor",
+        "battery_fault": {
+          "op": "or",
+          "args": [
+            {
+              "op": "gt",
+              "args": [
+                "battery_temperature_sensor",
+                60
+              ]
+            },
+            {
+              "op": "lt",
+              "args": [
+                "soc_sensor",
+                5
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "contactor",
+      "period_ms": 10,
+      "assign": {
+        "power_permit": {
+          "op": "and",
+          "args": [
+            "ignition",
+            {
+              "op": "eq",
+              "args": [
+                "battery_fault",
+                0
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "bindings": {
+    "power_allowed": "power_permit"
+  },
+  "messages": [
+    {
+      "name": "BatteryStatus",
+      "id": 784,
+      "dlc": 8,
+      "direction": "tx",
+      "signals": [
+        {
+          "name": "battery_soc",
+          "start": 0,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "pack_voltage",
+          "start": 16,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "V",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "pack_current",
+          "start": 32,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": -300,
+          "max": 300,
+          "unit": "A",
+          "signed": true,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "battery_fault",
+          "start": 48,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "power_permit",
+          "start": 49,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ],
+      "period_ms": 100,
+      "bus": "powertrain",
+      "fd": false,
+      "brs": false
+    }
+  ],
+  "state_machine": {
+    "initial": "OFF",
+    "states": [
+      "OFF",
+      "RUN",
+      "FAULT"
+    ],
+    "transitions": [
+      {
+        "from": "OFF",
+        "to": "RUN",
+        "when": "ignition"
+      },
+      {
+        "from": "RUN",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      },
+      {
+        "from": "RUN",
+        "to": "FAULT",
+        "when": "battery_fault"
+      },
+      {
+        "from": "FAULT",
+        "to": "RUN",
+        "when": {
+          "op": "eq",
+          "args": [
+            "battery_fault",
+            0
+          ]
+        }
+      },
+      {
+        "from": "FAULT",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "dtcs": [
+    {
+      "code": "P0A7E",
+      "uds_code": 687616,
+      "name": "Battery overtemperature",
+      "severity": "critical",
+      "trigger": {
+        "op": "gt",
+        "args": [
+          "battery_temperature_sensor",
+          60
+        ]
+      },
+      "recover": {
+        "op": "lt",
+        "args": [
+          "battery_temperature_sensor",
+          55
+        ]
+      }
+    },
+    {
+      "code": "P0AFA",
+      "uds_code": 719360,
+      "name": "Battery SOC low",
+      "severity": "warning",
+      "trigger": {
+        "op": "lt",
+        "args": [
+          "battery_soc",
+          5
+        ]
+      },
+      "recover": {
+        "op": "gt",
+        "args": [
+          "battery_soc",
+          10
+        ]
+      }
+    }
+  ],
+  "assumptions": [
+    "Generic educational model; not an OEM controller.",
+    "Classic CAN, little-endian signals, 10 ms simulation step."
+  ],
+  "hardware": {
+    "cpu_mhz": 120,
+    "ram_kib": 128,
+    "flash_kib": 512,
+    "task_budget_us": 8000,
+    "adc": {
+      "resolution_bits": 12,
+      "channels": {
+        "battery_temperature_sensor": [
+          -40,
+          100
+        ],
+        "voltage_sensor": [
+          0,
+          600
+        ],
+        "current_sensor": [
+          -300,
+          300
+        ]
+      }
+    },
+    "can_controller": {
+      "fd_capable": true,
+      "rx_fifo_frames": 128
+    },
+    "gpio_outputs": [
+      "power_permit"
+    ]
+  },
+  "domain": "Energy"
+}

@@ -1,0 +1,17 @@
+build/
+build-*/
+__pycache__/
+*.pyc
+*.log
+*.zip
+.env
+.opencode/
+
+# Local development state and generated evidence
+.orchestrator/
+.handoff/
+coordination/providers.local.json
+node_modules/
+.pytest_cache/
+/core
+/core.[0-9]*

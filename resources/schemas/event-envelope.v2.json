@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:virtual-vehicle-lab:event-envelope:2",
+  "title": "Measurement and Event Envelope v2",
+  "description": "Provenance and timing envelope attached to every simulated measurement, delivered CAN frame and end-to-end event chain. All *_at_us fields are INTEGER SIMULATION MICROSECONDS on the coordinator's simulation clock. Real model inference latency lives under wall and never mixes with simulation timestamps. Stage ordering rule: when present, sampled_at_us <= computed_at_us <= received_at_us <= observed_at_us <= applied_at_us. A stage timestamp may only be missing if that stage did not happen; it must never be copied from another stage or replaced by ground truth.",
+  "type": "object",
+  "required": ["contract_version", "kind", "epoch", "tick", "sim_time_us"],
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": { "const": 2 },
+    "kind": {
+      "enum": ["signal", "can_frame", "event_chain"],
+      "$comment": "signal = one decoded value; can_frame = one delivered frame; event_chain = one stage of a correlated end-to-end chain (e.g. radar sample -> ADAS decision -> applied brake)."
+    },
+    "correlation_id": {
+      "type": "string",
+      "maxLength": 64,
+      "$comment": "Links all envelopes belonging to one end-to-end chain. Present for event_chain, optional otherwise."
+    },
+    "stage": {
+      "type": "string",
+      "maxLength": 48,
+      "$comment": "event_chain only: acquisition | radar_compute | can_delivery | adas_decision | gateway | actuation."
+    },
+    "run_id": { "type": "string", "maxLength": 64 },
+    "project_id": { "type": "string", "maxLength": 64 },
+    "epoch": { "type": "integer", "minimum": 0 },
+    "tick": { "type": "integer", "minimum": 0 },
+    "sim_time_us": { "type": "integer", "minimum": 0 },
+    "source": {
+      "type": "object",
+      "required": ["ecu"],
+      "additionalProperties": false,
+      "properties": {
+        "ecu": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "message": { "type": "string", "maxLength": 64 },
+        "can_id": { "type": "integer", "minimum": 0, "maximum": 536870911 },
+        "bus": { "type": "string", "maxLength": 32 },
+        "signal": { "type": "string", "maxLength": 64 }
+      }
+    },
+    "name": { "type": "string", "maxLength": 64 },
+    "value": { "type": ["number", "boolean", "null"] },
+    "unit": { "type": "string", "maxLength": 16 },
+    "validity": {
+      "enum": ["valid", "stale", "invalid", "unknown"],
+      "$comment": "stale = older than its freshness budget; invalid = produced after a deadline miss, dropped frame, wrong epoch or fault. A syntactically correct number with invalid quality must never be presented as fresh ground truth."
+    },
+    "quality_reason": {
+      "enum": [
+        "none",
+        "stale_input",
+        "deadline_miss",
+        "dropped_frame",
+        "epoch_mismatch",
+        "sensor_fault",
+        "fifo_overflow",
+        "not_sampled",
+        "worker_missing",
+        "policy_latency"
+      ]
+    },
+    "data_age_us": {
+      "type": "integer",
+      "minimum": 0,
+      "$comment": "observed_at_us minus sampled_at_us for this quantity. Counted once; no stage interval is double-counted."
+    },
+    "profile_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "$comment": "Hardware/resource profile identity of the producing ECU. Frozen in the run manifest."
+    },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "timestamps": { "$ref": "#/$defs/timestamps" },
+    "wall": { "$ref": "#/$defs/wall" }
+  },
+  "$defs": {
+    "timestamps": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Integer simulation microseconds. Absent stage = stage did not happen.",
+      "properties": {
+        "sampled_at_us": { "type": "integer", "minimum": 0 },
+        "computed_at_us": { "type": "integer", "minimum": 0 },
+        "received_at_us": { "type": "integer", "minimum": 0 },
+        "observed_at_us": { "type": "integer", "minimum": 0 },
+        "applied_at_us": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "wall": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Real host measurements (monotonic). Never subtracted from simulation timestamps.",
+      "properties": {
+        "host_overhead_ms": { "type": "number", "minimum": 0 },
+        "inference_latency_ms": { "type": "number", "minimum": 0 },
+        "pacing_lag_ms": { "type": "number", "minimum": 0 },
+        "timing_valid": { "type": "boolean" }
+      }
+    }
+  }
+}

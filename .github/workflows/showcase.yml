@@ -1,0 +1,39 @@
+name: Native engine web showcase
+on:
+  push:
+    branches: [showcase/web]
+  pull_request:
+    paths: ["showcase/**", "web/**", "tests/showcase/**", "tools/run_web_showcase.sh", ".github/workflows/showcase.yml"]
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: showcase/package-lock.json
+      - name: Build the native engine without desktop/test dependencies
+        run: |
+          cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DVEHICLE_LAB_DESKTOP=OFF
+          cmake --build build/native -j2
+      - name: Test actual native HTTP/worker lifecycle
+        env:
+          VCLAB_RUNTIME: ${{ github.workspace }}/build/native/vclab
+        run: python3 tests/showcase/test_native_showcase.py
+      - name: Install pinned browser verification tooling
+        run: |
+          npm ci --prefix showcase
+          npx --prefix showcase playwright install --with-deps chromium --only-shell
+      - name: Exercise browser controls and native effects
+        env:
+          VCLAB_RUNTIME: ${{ github.workspace }}/build/native/vclab
+          SHOWCASE_EVIDENCE: ${{ github.workspace }}/build/showcase-evidence
+        run: npm test --prefix showcase
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-showcase-evidence
+          path: build/showcase-evidence

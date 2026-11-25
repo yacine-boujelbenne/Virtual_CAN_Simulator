@@ -1,0 +1,931 @@
+{
+  "schema_version": 1,
+  "name": "ADAS ECU",
+  "inputs": [
+    "ignition",
+    "assist_enabled",
+    "target_speed",
+    "aeb_enabled",
+    "brake",
+    "obj0_range",
+    "obj0_closing_speed",
+    "obj0_confidence",
+    "obj0_valid",
+    "obj1_range",
+    "obj1_closing_speed",
+    "obj1_confidence",
+    "obj1_valid",
+    "obj2_range",
+    "obj2_closing_speed",
+    "obj2_confidence",
+    "obj2_valid",
+    "obj3_range",
+    "obj3_closing_speed",
+    "obj3_confidence",
+    "obj3_valid",
+    "radar_valid",
+    "object_count",
+    "sample_counter",
+    "vehicle_speed",
+    "vehicle_rpm",
+    "radar_age_ms",
+    "front_perception_sensor"
+  ],
+  "variables": {
+    "time_to_collision": 99,
+    "aeb_request": 0,
+    "acc_throttle": 0,
+    "acc_active": 0,
+    "fcw": 0,
+    "adas_fault": 0,
+    "startup_ms": 0,
+    "perception_gap": 99,
+    "fusion_disagree": 0,
+    "perception_valid": 0
+  },
+  "tasks": [
+    {
+      "name": "fusion",
+      "period_ms": 10,
+      "cost_us": 450,
+      "assign": {
+        "time_to_collision": {
+          "op": "min",
+          "args": [
+            99,
+            {
+              "op": "div",
+              "args": [
+                "obj0_range",
+                {
+                  "op": "max",
+                  "args": [
+                    "obj0_closing_speed",
+                    0.1
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "adas_fault": {
+          "op": "if",
+          "args": [
+            {
+              "op": "lt",
+              "args": [
+                "startup_ms",
+                100
+              ]
+            },
+            0,
+            {
+              "op": "or",
+              "args": [
+                {
+                  "op": "eq",
+                  "args": [
+                    "radar_valid",
+                    0
+                  ]
+                },
+                {
+                  "op": "gt",
+                  "args": [
+                    "radar_age_ms",
+                    100
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "startup_ms": {
+          "op": "min",
+          "args": [
+            200,
+            {
+              "op": "add",
+              "args": [
+                "startup_ms",
+                10
+              ]
+            }
+          ]
+        },
+        "perception_gap": {
+          "op": "max",
+          "args": [
+            {
+              "op": "sub",
+              "args": [
+                "obj0_range",
+                "front_perception_sensor"
+              ]
+            },
+            {
+              "op": "sub",
+              "args": [
+                "front_perception_sensor",
+                "obj0_range"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "fusion_consistency",
+      "period_ms": 10,
+      "cost_us": 120,
+      "assign": {
+        "fusion_disagree": {
+          "op": "gt",
+          "args": [
+            "perception_gap",
+            5
+          ]
+        }
+      }
+    },
+    {
+      "name": "perception_validity",
+      "period_ms": 10,
+      "cost_us": 100,
+      "assign": {
+        "perception_valid": {
+          "op": "and",
+          "args": [
+            {
+              "op": "eq",
+              "args": [
+                "radar_valid",
+                1
+              ]
+            },
+            {
+              "op": "eq",
+              "args": [
+                "fusion_disagree",
+                0
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "collision_warning",
+      "period_ms": 10,
+      "cost_us": 180,
+      "assign": {
+        "fcw": {
+          "op": "and",
+          "args": [
+            {
+              "op": "eq",
+              "args": [
+                "adas_fault",
+                0
+              ]
+            },
+            {
+              "op": "and",
+              "args": [
+                "radar_valid",
+                {
+                  "op": "lt",
+                  "args": [
+                    "time_to_collision",
+                    3
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "aeb_request": {
+          "op": "if",
+          "args": [
+            {
+              "op": "and",
+              "args": [
+                {
+                  "op": "eq",
+                  "args": [
+                    "adas_fault",
+                    0
+                  ]
+                },
+                {
+                  "op": "and",
+                  "args": [
+                    {
+                      "op": "and",
+                      "args": [
+                        "aeb_enabled",
+                        "ignition"
+                      ]
+                    },
+                    {
+                      "op": "and",
+                      "args": [
+                        {
+                          "op": "and",
+                          "args": [
+                            "radar_valid",
+                            "perception_valid"
+                          ]
+                        },
+                        {
+                          "op": "and",
+                          "args": [
+                            {
+                              "op": "gt",
+                              "args": [
+                                "vehicle_speed",
+                                1
+                              ]
+                            },
+                            {
+                              "op": "or",
+                              "args": [
+                                {
+                                  "op": "lt",
+                                  "args": [
+                                    "time_to_collision",
+                                    2
+                                  ]
+                                },
+                                {
+                                  "op": "lt",
+                                  "args": [
+                                    "obj0_range",
+                                    5
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            1,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "name": "cruise_control",
+      "period_ms": 10,
+      "cost_us": 350,
+      "assign": {
+        "acc_active": {
+          "op": "and",
+          "args": [
+            {
+              "op": "and",
+              "args": [
+                "assist_enabled",
+                "ignition"
+              ]
+            },
+            {
+              "op": "and",
+              "args": [
+                {
+                  "op": "eq",
+                  "args": [
+                    "adas_fault",
+                    0
+                  ]
+                },
+                {
+                  "op": "eq",
+                  "args": [
+                    "brake",
+                    0
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "acc_throttle": {
+          "op": "if",
+          "args": [
+            {
+              "op": "gt",
+              "args": [
+                "obj0_range",
+                {
+                  "op": "add",
+                  "args": [
+                    6,
+                    {
+                      "op": "mul",
+                      "args": [
+                        "vehicle_speed",
+                        0.42
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "op": "min",
+              "args": [
+                0.7,
+                {
+                  "op": "max",
+                  "args": [
+                    0,
+                    {
+                      "op": "mul",
+                      "args": [
+                        {
+                          "op": "sub",
+                          "args": [
+                            "target_speed",
+                            "vehicle_speed"
+                          ]
+                        },
+                        0.018
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            0
+          ]
+        }
+      }
+    }
+  ],
+  "bindings": {},
+  "messages": [
+    {
+      "name": "RadarObjectList",
+      "id": 1024,
+      "direction": "rx",
+      "dlc": 32,
+      "fd": true,
+      "brs": true,
+      "bus": "adas",
+      "signals": [
+        {
+          "name": "object_count",
+          "start": 0,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 4,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "sample_counter",
+          "start": 8,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 255,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "radar_valid",
+          "start": 16,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj0_range",
+          "start": 24,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj0_closing_speed",
+          "start": 40,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj0_confidence",
+          "start": 56,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj0_valid",
+          "start": 64,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_range",
+          "start": 80,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_closing_speed",
+          "start": 96,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_confidence",
+          "start": 112,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj1_valid",
+          "start": 120,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_range",
+          "start": 136,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_closing_speed",
+          "start": 152,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_confidence",
+          "start": 168,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj2_valid",
+          "start": 176,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_range",
+          "start": 192,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 600,
+          "unit": "m",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_closing_speed",
+          "start": 208,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 80,
+          "unit": "m/s",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_confidence",
+          "start": 224,
+          "length": 8,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 100,
+          "unit": "%",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "obj3_valid",
+          "start": 232,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ]
+    },
+    {
+      "name": "VehicleStatus",
+      "id": 288,
+      "dlc": 8,
+      "direction": "rx",
+      "signals": [
+        {
+          "name": "vehicle_speed",
+          "start": 0,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 288,
+          "unit": "km/h",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "vehicle_rpm",
+          "start": 16,
+          "length": 16,
+          "factor": 0.25,
+          "offset": 0,
+          "min": 0,
+          "max": 16000,
+          "unit": "rpm",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ],
+      "bus": "adas",
+      "fd": false,
+      "brs": false
+    },
+    {
+      "name": "ADASControl",
+      "id": 1104,
+      "direction": "tx",
+      "period_ms": 10,
+      "dlc": 8,
+      "fd": false,
+      "brs": false,
+      "bus": "adas",
+      "signals": [
+        {
+          "name": "aeb_request",
+          "start": 0,
+          "length": 16,
+          "factor": 0.0001,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "acc_throttle",
+          "start": 16,
+          "length": 16,
+          "factor": 0.0001,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "acc_active",
+          "start": 32,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "fcw",
+          "start": 33,
+          "length": 1,
+          "factor": 1,
+          "offset": 0,
+          "min": 0,
+          "max": 1,
+          "unit": "",
+          "signed": false,
+          "byte_order": "little_endian"
+        },
+        {
+          "name": "time_to_collision",
+          "start": 40,
+          "length": 16,
+          "factor": 0.01,
+          "offset": 0,
+          "min": 0,
+          "max": 99,
+          "unit": "s",
+          "signed": false,
+          "byte_order": "little_endian"
+        }
+      ]
+    }
+  ],
+  "state_machine": {
+    "initial": "OFF",
+    "states": [
+      "OFF",
+      "MONITORING",
+      "CRUISE",
+      "WARNING",
+      "BRAKING",
+      "FAULT"
+    ],
+    "transitions": [
+      {
+        "from": "OFF",
+        "to": "MONITORING",
+        "when": "ignition"
+      },
+      {
+        "from": "MONITORING",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      },
+      {
+        "from": "CRUISE",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      },
+      {
+        "from": "WARNING",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      },
+      {
+        "from": "BRAKING",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      },
+      {
+        "from": "FAULT",
+        "to": "OFF",
+        "when": {
+          "op": "eq",
+          "args": [
+            "ignition",
+            0
+          ]
+        }
+      },
+      {
+        "from": "MONITORING",
+        "to": "FAULT",
+        "when": "adas_fault"
+      },
+      {
+        "from": "CRUISE",
+        "to": "FAULT",
+        "when": "adas_fault"
+      },
+      {
+        "from": "WARNING",
+        "to": "FAULT",
+        "when": "adas_fault"
+      },
+      {
+        "from": "BRAKING",
+        "to": "FAULT",
+        "when": "adas_fault"
+      },
+      {
+        "from": "MONITORING",
+        "to": "BRAKING",
+        "when": "aeb_request"
+      },
+      {
+        "from": "CRUISE",
+        "to": "BRAKING",
+        "when": "aeb_request"
+      },
+      {
+        "from": "WARNING",
+        "to": "BRAKING",
+        "when": "aeb_request"
+      },
+      {
+        "from": "MONITORING",
+        "to": "WARNING",
+        "when": "fcw"
+      },
+      {
+        "from": "CRUISE",
+        "to": "WARNING",
+        "when": "fcw"
+      },
+      {
+        "from": "MONITORING",
+        "to": "CRUISE",
+        "when": "acc_active"
+      },
+      {
+        "from": "CRUISE",
+        "to": "MONITORING",
+        "when": {
+          "op": "eq",
+          "args": [
+            "acc_active",
+            0
+          ]
+        }
+      },
+      {
+        "from": "WARNING",
+        "to": "MONITORING",
+        "when": {
+          "op": "eq",
+          "args": [
+            "fcw",
+            0
+          ]
+        }
+      },
+      {
+        "from": "BRAKING",
+        "to": "MONITORING",
+        "when": {
+          "op": "eq",
+          "args": [
+            "aeb_request",
+            0
+          ]
+        }
+      },
+      {
+        "from": "FAULT",
+        "to": "MONITORING",
+        "when": {
+          "op": "eq",
+          "args": [
+            "adas_fault",
+            0
+          ]
+        }
+      }
+    ]
+  },
+  "dtcs": [
+    {
+      "code": "C1A50",
+      "uds_code": 12690688,
+      "name": "ADAS perception input unavailable",
+      "severity": "warning",
+      "trigger": "adas_fault",
+      "recover": {
+        "op": "eq",
+        "args": [
+          "adas_fault",
+          0
+        ]
+      }
+    }
+  ],
+  "assumptions": [
+    "Functional software-in-the-loop demonstration; not production ADAS/ADS.",
+    "Radar observations are synthetic sensor measurements, not raw camera/radar perception.",
+    "Perception fusion cross-checks the radar object against an independent range measurement; a disagreement above 5 m keeps the forward-collision warning but inhibits emergency braking."
+  ],
+  "hardware": {
+    "cpu_mhz": 240,
+    "ram_kib": 256,
+    "flash_kib": 1024,
+    "task_budget_us": 8000,
+    "adc": {
+      "resolution_bits": 12,
+      "channels": {}
+    },
+    "can_controller": {
+      "fd_capable": true,
+      "rx_fifo_frames": 128
+    },
+    "gpio_outputs": []
+  },
+  "domain": "Assistance",
+  "freshness_inputs": {
+    "radar_age_ms": {
+      "id": 1024,
+      "bus": "adas"
+    }
+  }
+}
